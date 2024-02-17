@@ -214,11 +214,11 @@ class Decoder(nn.Module):
             x = self.linear(x).unsqueeze(2)
             x = self.net(x)
             if DECODER_STYLE == 'SPECTRAL_COMBINED':
-                x = self.output_dense(x).squeeze()
+                x = self.output_dense(x).squeeze(1)
                 amp, phase = x[:, :512], x[:, 512:]
             elif DECODER_STYLE == 'SPECTRAL_SEPARATED':
-                amp = self.amp_dense(x).squeeze()
-                phase = self.phase_dense(x).squeeze()
+                amp = self.amp_dense(x).squeeze(1)
+                phase = self.phase_dense(x).squeeze(1)
 
             complex_expression = torch.concat((torch.zeros(x.shape[0],1).to(DEVICE), amp*torch.exp(1j * phase)), dim=-1)
             x_hat = idft(complex_expression)

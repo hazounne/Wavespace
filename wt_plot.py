@@ -29,9 +29,9 @@ if __name__ == '__main__':
         query_name = WAVEFORM_NAMES[Q]
         query_num = '126'
         query = f'{query_name}_{query_num}' #Condition
-        print(f'Query:{query}, Condition:{WAVEFORM_NAMES[C]}')
-
-        query_path = PARENT_PATH / f'wss/SerumDataset/{query}.wav'
+        #query_path = PARENT_PATH / f'wss/SerumDataset/{query}.wav'
+        query_path = f'/workspace/wss/SerumDataset/{query}.wav'
+        print(query_path)
         with torch.no_grad():
             i_tensor = torch.tensor(1j, dtype=torch.complex64)
             indices = [index for index, value in enumerate(db.file_list) if value == query_path]
