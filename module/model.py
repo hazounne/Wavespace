@@ -60,16 +60,16 @@ class Wavespace(pl.LightningModule):
     def forward(self, batches, gen=False):
         #Encode
         if DATASET_TYPE == 'WAVETABLE':
-            x, y, pos, amp = batches
+            x, y, pos, amp, sc = batches
             pos = pos.reshape(-1,1)
-
         elif DATASET_TYPE == 'PLAY':
             x, f0, amp = play_preprocess(x, f_s=16000, n=X_DIM, f_0='crepe') #round(`midi_to_hz`(pitch)))
         mu_w, logvar_w = self.encoder(x)
         w = self.sampling(mu_w, logvar_w)
-
         #Decode
-        if DATASET_TYPE == 'WAVETABLE': x_hat = self.decoder(w)
+        if DATASET_TYPE == 'WAVETABLE':
+            w_sc = torch.cat((w, sc), dim=-1)
+            x_hat = self.decoder(w_sc)
         elif DATASET_TYPE == 'PLAY': x_hat = self.decoder(w, amp, f0)
         if wandb.run != None:
             wandb.log({
@@ -130,14 +130,17 @@ class Wavespace(pl.LightningModule):
                     logvar_w,
                     self.mu_w[y],
                     self.logvar_w[y],).unsqueeze(1), -1)
+        
+        L3 = torch.sum(torch.abs(x - x_hat), -1)
 
         loss = (B1 * L1 #RECON
                 + B2 * L2 #KL
-                ).sum()
+                + L3).sum()
         
         if wandb.run != None:
             wandb.log({f'L1': L1,
                        f'L2': L2,
+                       f'L3': L3,
                        f'{process}_Loss': loss,
                        })
         assert not (torch.isnan(loss).any())

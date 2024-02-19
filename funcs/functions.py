@@ -59,3 +59,42 @@ def get_padding(k, s=1, d=1, mode="centered") -> tuple:
     else:
         raise Exception(f"Padding mode {mode} is not valid")
     return (p_left, p_right)
+
+def dco_extractFeatures(single_cycle: torch.Tensor, tile_num=6):
+    single_cycle = single_cycle
+    waveform_length = len(single_cycle)
+    N = waveform_length * tile_num
+    Nh = N // 2 + 1
+    signal = single_cycle.tile((tile_num,))
+    spec = fft.rfft(signal)
+    # calculate power spectrum
+    spec_pow = torch.real(spec * torch.conj(spec) / N)
+
+    total = sum(spec_pow)
+    if total == 0:
+        brightness = -1
+        richness = -1
+    else:
+        centroid = torch.sum(spec_pow * torch.linspace(0, 1, Nh)) / total
+        k = torch.tensor([5.5])
+        brightness = log(centroid * (torch.exp(k) - 1) + 1) / k
+
+        spread = torch.sqrt(sum(spec_pow * (torch.linspace(0, 1, Nh) - centroid).pow(2)) / total)
+        k = torch.tensor([7.5])
+        richness = log(spread * (torch.exp(k) - 1) + 1) / k
+
+        zero_crossing_rate = torch.where(torch.diff(torch.sign(single_cycle)))[0].shape[0] / waveform_length
+        k = torch.tensor([5.5])
+        noisiness = log(zero_crossing_rate * (torch.exp(k) - 1) + 1) / k
+
+    # fullness
+    hf = N / waveform_length
+    hnumber = int(waveform_length / 2) - 1
+    all_harmonics = torch.sum(spec_pow[torch.round(hf * torch.linspace(1, hnumber, hnumber)).int()])
+    odd_harmonics = torch.sum(spec_pow[torch.round(hf * torch.linspace(1, hnumber, int(hnumber / 2))).int()])
+    if all_harmonics == 0:
+        fullness = 0
+    else:
+        fullness = torch.tensor([1 - odd_harmonics / all_harmonics])
+        
+    return torch.concat((brightness, richness, fullness, noisiness), dim=-1)

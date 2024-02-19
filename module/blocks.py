@@ -180,7 +180,7 @@ class Decoder(nn.Module):
         relu_out = nn.ReLU()
 
         if BLOCK_STYLE == 'CONV1D':
-            self.linear = nn.Sequential(nn.Linear(LATENT_LEN, DEC_H[0]), relu)
+            self.linear = nn.Sequential(nn.Linear(LATENT_LEN+SEMENTIC_CONDITION_LEN, DEC_H[0]), relu)
             if DECODER_STYLE == 'SPECTRAL_COMBINED':
                 self.output_dense = nn.Sequential(Conv1d(DEC_H[-1], 1, kernel_size=1, stride=1), tanh)
             elif DECODER_STYLE == 'SPECTRAL_SEPARATED':

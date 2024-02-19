@@ -107,8 +107,9 @@ class DatasetBuilder(Dataset):
       # x = torch.clamp(x, min=0, max=1)
 
       y, pos = filename_parse(filename).values() # should be correspond to
-      f0 = torch.ones(1) * 440 #arbitrary
-      return x, y, amp, pos
+      #f0 = torch.ones(1) * 440 #arbitrary
+      features = dco_extractFeatures(x, tile_num=6)
+      return x, y, amp, pos, features
 
     elif DATASET_TYPE == 'PLAY':
       y, method, pitch, velocity = filename_parse(filename).values()

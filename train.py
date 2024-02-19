@@ -17,6 +17,7 @@ train_loaders, test_loaders, val_loaders = data_build(
 
 if __name__ == '__main__':
     wavespace = Wavespace().to(DEVICE)
+    print(wavespace)
     ###CHECKPOINT LOAD###
     if CKPT_LOAD:
         load_ckpt = torch.load(CKPT_TEST)

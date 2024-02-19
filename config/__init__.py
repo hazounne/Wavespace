@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 _USER_DATA = {'GHK': {'WANDB_ID': '6ec2335e1f6ce27570b1c7a53c2ad085a62f28fc',
-                     'PATH_BASE': '/content'},
+                     'PATH_BASE': '/Users/johnkim/Desktop/2023_2_MARG/wss_code'},
              'HZL': {'WANDB_ID': '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b',
                      'PATH_BASE': '/workspace'},
                      }
@@ -15,10 +15,10 @@ _USER_CURRENT = 'HZL' #set as you before any operation
 PARENT_PATH = Path(_USER_DATA[_USER_CURRENT]['PATH_BASE']) #/content
 WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 #check: numworkers, wandb.
-TRAINING = False
+TRAINING = True
 CKPT_LOAD = False
-EXP_NAME = 'WSS_SPECTRAL_LEARNING'
-NUM_WORKERS = 1
+EXP_NAME = 'WSS_SPECTRAL_COND'
+NUM_WORKERS = 12
 
 #SETTINGS
 if TRAINING:
@@ -26,12 +26,12 @@ if TRAINING:
     wandb.login(key=WANDB_ID)
 else:
     WANDB = 0
-EPOCH = 500
+EPOCH = 1000
 CKPT_NAME = f'{EXP_NAME}_{1}'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
-DECODER_STYLE = 'SPECTRAL_COMBINED'
+DECODER_STYLE = 'SPECTRAL_SEPARATED'
 LOSS_SCHEDULE = True
 SUB_DIM = 2
 #################################################################
@@ -182,6 +182,7 @@ DEC_H = [512, 256, 128, 64, 32, 16, 8]
 DEC_K = [4, 8, 8, 5, 5, 2]
 DEC_S = [2, 3, 3, 3, 3, 2]
 LATENT_LEN = N_CONDS*SUB_DIM
+SEMENTIC_CONDITION_LEN = 4
 RES_BLOCK_CONV_NUM = 3
 
 
@@ -206,6 +207,6 @@ else:
         k = random.randint(0,2**12)
         if k % 5 != 0: break
     CKPT_PATH = PARENT_PATH / f'wss/ckpt/{EXP_NAME}_{k}.pth'
-GPU_NUM = 0
+GPU_NUM = 12
 DEVICE = torch.device(f'cuda:{GPU_NUM}' if torch.cuda.is_available() else 'cpu')
 
