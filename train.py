@@ -26,7 +26,7 @@ if __name__ == '__main__':
 # Train and Validate
     trainer = pl.Trainer(max_epochs=EPOCH,
                          accelerator='gpu',
-                         gpus=[GPU_NUM],
+                         devices=[GPU_NUM],
                          enable_progress_bar=True,
                          default_root_dir=PARENT_PATH / f"wss/log",
                          )

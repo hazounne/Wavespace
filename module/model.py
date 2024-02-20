@@ -1,6 +1,7 @@
 from config import *
 from .blocks import *
 from funcs import *
+from .gan import GAN_module
 
 import matplotlib.pyplot as plt
 from torch.fft import rfft as fft
@@ -94,10 +95,17 @@ class Wavespace(pl.LightningModule):
         if gen: return x_hat
         else: return x, x_hat, mu_w, logvar_w, y
     
-    def training_step(self, batches):
+    def training_step(self, batches, batch_idx):
+        if self.current_epoch > WARM_UP_EPOCH:
+            self.encoder.set_warmed_up(True)
+            
         x, x_hat, mu_w, logvar_w, y = self(batches)
+        loss_dis, loss_gen = GAN_module(x, x_hat, self.current_epoch)
         #loss
-        loss = self.loss_function(x, x_hat, mu_w, logvar_w, y, 'train')
+        if self.current_epoch <= WARM_UP_EPOCH or batch_idx%2 == 0:
+            loss = self.loss_function(x, x_hat, mu_w, logvar_w, y, 'train', loss_gen)
+        else:
+            loss = loss_dis # 얘 옵티마이저 따로 해야할 것 같긴한데....
         #optimize
         self.optim_1.zero_grad()
         loss.backward(retain_graph=True)
@@ -115,8 +123,8 @@ class Wavespace(pl.LightningModule):
     
     def loss_function(self, x, x_hat,
                       mu_w, logvar_w, y,
-                      process='train',
-                    ):
+                      process='train', loss_gen=None):
+
         x_fft, x_hat_fft = torch.abs(fft(x)), torch.abs(fft(x_hat))
         spectral_difference = x_fft - x_hat_fft
         #wave_difference = x- x_hat
@@ -125,17 +133,24 @@ class Wavespace(pl.LightningModule):
         #L1_w = torch.sum(torch.abs(wave_difference), -1)
         L1 = L1_ms/BS #(L1_ms + L1_log)/BS
 
-        L2 = torch.sum(self.KL(
-                    mu_w,
-                    logvar_w,
-                    self.mu_w[y],
-                    self.logvar_w[y],).unsqueeze(1), -1)
-        
+        if self.current_epoch <= WARM_UP_EPOCH: # 1st 스텝러닝
+            L2 = torch.sum(self.KL(
+                        mu_w,
+                        logvar_w,
+                        self.mu_w[y],
+                        self.logvar_w[y],).unsqueeze(1), -1)
+            L4 = 0
+            L5 = 0
+        else: # 2nd 스텝 러닝
+            L2 = 0
+            L4 = loss_gen['feature_matching']
+            L5 = loss_gen['adversarial']
+
         L3 = torch.sum(torch.abs(x - x_hat), -1)
 
         loss = (B1 * L1 #RECON
                 + B2 * L2 #KL
-                + L3).sum()
+                + L3 + L4 + L5).sum()
         
         if wandb.run != None:
             wandb.log({f'L1': L1,

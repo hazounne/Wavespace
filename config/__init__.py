@@ -7,11 +7,11 @@ import os
 from pathlib import Path
 
 _USER_DATA = {'GHK': {'WANDB_ID': '6ec2335e1f6ce27570b1c7a53c2ad085a62f28fc',
-                     'PATH_BASE': '/Users/johnkim/Desktop/2023_2_MARG/wss_code'},
+                     'PATH_BASE': '/usr/lib/mydir/'},
              'HZL': {'WANDB_ID': '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b',
                      'PATH_BASE': '/workspace'},
                      }
-_USER_CURRENT = 'HZL' #set as you before any operation
+_USER_CURRENT = 'GHK' #set as you before any operation
 PARENT_PATH = Path(_USER_DATA[_USER_CURRENT]['PATH_BASE']) #/content
 WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 #check: numworkers, wandb.
@@ -26,7 +26,8 @@ if TRAINING:
     wandb.login(key=WANDB_ID)
 else:
     WANDB = 0
-EPOCH = 1000
+EPOCH = 1500
+WARM_UP_EPOCH = 750 #투스텝 러닝
 CKPT_NAME = f'{EXP_NAME}_{1}'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
@@ -159,6 +160,8 @@ EPSILON = 1e-8
 LOGVAR = 0
 NORMALISED_ENERGY = 1
 BETA = 1/256
+LAMBDA_FEATURE_MATCHING = 20 #feature matching loss 람다
+LAMBDA_ADVERSARIAL = 1 # GAN generator adversarial loss 람다
 
 #YAML
 if WANDB == "SWEEP":
@@ -185,6 +188,17 @@ LATENT_LEN = N_CONDS*SUB_DIM
 SEMENTIC_CONDITION_LEN = 4
 RES_BLOCK_CONV_NUM = 3
 
+#Discriminator
+DISC_NUM = 3
+#disc conv
+DISC_IN_SIZE = 1
+DISC_OUT_SIZE = 1
+DISC_CAPACITY = 64
+DISC_N_LAYERS = 4
+DISC_STRIDE = 4
+DISC_KERNEL_SIZE = 15
+DISC_NORM_MODE = 'weight_norm'
+
 
 if WANDB == 'TRAIN':
     wandb.init(
@@ -207,6 +221,6 @@ else:
         k = random.randint(0,2**12)
         if k % 5 != 0: break
     CKPT_PATH = PARENT_PATH / f'wss/ckpt/{EXP_NAME}_{k}.pth'
-GPU_NUM = 12
+GPU_NUM = 3
 DEVICE = torch.device(f'cuda:{GPU_NUM}' if torch.cuda.is_available() else 'cpu')
 

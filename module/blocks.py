@@ -28,8 +28,8 @@ class Conv1d(nn.Conv1d):
             self.dilation,
             self.groups,
         )
-        if not TRAINING:
-            print(f'Conv {x.shape[1:]} -> {out.shape[1:]}') # console_check
+        #if not TRAINING:
+        #    print(f'Conv {x.shape[1:]} -> {out.shape[1:]}') # console_check
         return out
 
 class TrConv1d(nn.ConvTranspose1d):
@@ -50,8 +50,8 @@ class TrConv1d(nn.ConvTranspose1d):
             self.groups,
             self.dilation,
         )
-        if not TRAINING:
-            print(f'TrConv {x.shape[1:]} -> {out.shape[1:]}') # console_check
+        #if not TRAINING:
+        #    print(f'TrConv {x.shape[1:]} -> {out.shape[1:]}') # console_check
         return out
     
 # stride에 mod 2 (rave)
@@ -147,12 +147,20 @@ class Encoder(nn.Module):
 
             # Fully connected (Dense) layer
             self.fc = nn.Linear(64, W_DIM*2)
+        
+        self.register_buffer("warmed_up", torch.tensor(0))
+
+    def set_warmed_up(self, state):
+        state = torch.tensor(int(state), device=self.warmed_up.device)
+        self.warmed_up = state
 
     def forward(self, x):
         if BLOCK_STYLE == 'CONV1D':
             x = self.net(x.unsqueeze(1))
             x = torch.squeeze(x, dim=2)
             w = self.linear(x)
+            if self.warmed_up:
+                w = w.detach()
             return w[:, :W_DIM], w[:, W_DIM:2*W_DIM]
         if BLOCK_STYLE == 'DDSP':
             # Input shape: (batch_size, 13, 1)
