@@ -33,12 +33,14 @@ class Wavespace(pl.LightningModule):
         #self.prior = torch.zeros((BS,W_DIM)).to(DEVICE) #have same prior
         #OPTIMIZERS
         self.optim_1 = torch.optim.Adam(self.parameters(), betas=(0.9, 0.999), lr=LR)
+        self.optim_disc = torch.optim.Adam(self.parameters(), betas=(0.9, 0.999), lr=LR/10)
 
         #LR SCHEDULERS
         if LOSS_SCHEDULE:
             milestones = [3 ** i for i in range(7)]
             gamma = 0.1 ** (1 / 7)
             self.scheduler1 = lr_scheduler.MultiStepLR(self.optim_1, milestones=milestones, gamma=gamma)
+            self.schedulerdisc = lr_scheduler.MultiStepLR(self.optim_disc, milestones=milestones, gamma=gamma)
 
         #MISC
         self.midi_to_hz = torch.Tensor([440 * (2 ** ((midi_pitch - 69) / 12)) for midi_pitch in range(128)]).to(DEVICE)
@@ -104,15 +106,24 @@ class Wavespace(pl.LightningModule):
         #loss
         if self.current_epoch <= WARM_UP_EPOCH or batch_idx%2 == 0: 
             loss = self.loss_function(x, x_hat, mu_w, logvar_w, y, 'train', loss_gen)
+
+            self.optim_1.zero_grad()
+            loss.backward(retain_graph=True)
+            self.optim_1.step()
+
+            if LOSS_SCHEDULE: self.scheduler1.step()
         else: #discriminator loss
             loss = loss_dis # 얘 옵티마이저 따로 해야할 것 같긴한데....
             if wandb.run != None:
                 wandb.log({f'Disc loss': loss})
+
+            self.optim_disc.zero_grad()
+            loss.backward(retain_graph=True)
+            self.optim_disc.step()
+            if LOSS_SCHEDULE: self.schedulerdisc.step()
+
         #optimize
-        self.optim_1.zero_grad()
-        loss.backward(retain_graph=True)
-        self.optim_1.step()
-        if LOSS_SCHEDULE: self.scheduler1.step()
+        
         return loss
 
     def gen(self, x):
