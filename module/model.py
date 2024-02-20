@@ -102,10 +102,12 @@ class Wavespace(pl.LightningModule):
         x, x_hat, mu_w, logvar_w, y = self(batches)
         loss_dis, loss_gen = GAN_module(x, x_hat, self.current_epoch)
         #loss
-        if self.current_epoch <= WARM_UP_EPOCH or batch_idx%2 == 0:
+        if self.current_epoch <= WARM_UP_EPOCH or batch_idx%2 == 0: 
             loss = self.loss_function(x, x_hat, mu_w, logvar_w, y, 'train', loss_gen)
-        else:
+        else: #discriminator loss
             loss = loss_dis # 얘 옵티마이저 따로 해야할 것 같긴한데....
+            if wandb.run != None:
+                wandb.log({f'Disc loss': loss})
         #optimize
         self.optim_1.zero_grad()
         loss.backward(retain_graph=True)
@@ -156,6 +158,8 @@ class Wavespace(pl.LightningModule):
             wandb.log({f'L1': L1,
                        f'L2': L2,
                        f'L3': L3,
+                       f'L4': L4,
+                       f'L5': L5,
                        f'{process}_Loss': loss,
                        })
         assert not (torch.isnan(loss).any())
