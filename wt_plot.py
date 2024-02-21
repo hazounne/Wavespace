@@ -42,7 +42,7 @@ if __name__ == '__main__':
                     datum[j] = torch.Tensor([datum[j]]).to(torch.int64).to(DEVICE)
                 else: datum[j] = datum[j].reshape(1,-1).to(DEVICE)
 
-            x, y, amp, pos = tuple(datum)
+            x, y, amp, pos, features = tuple(datum)
             mu_w, logvar_w = wavespace.encoder(x) #x, x_hat, mu_w, logvar_w, y
             w = mu_w
 
@@ -52,13 +52,15 @@ if __name__ == '__main__':
                     #z = torch.tensor([0, 0]).float().unsqueeze(0).to(DEVICE)
                     #w = torch.zeros_like(w).to(DEVICE)
                     w[0,2*C] = z1
-                    w[0,2*C+1] = z2
+                    #w[0,2*C+1] = z2
+                    features[0,0] = z2/9
                     #pos = torch.tensor([[z2]]).float().to(DEVICE)
                     #print(f'W: {w}')
                     #print(f'pos: {pos}')
                     #f0 = f0.to(DEVICE)
                     #amp = amp.to(DEVICE)
                     #amp = torch.tensor([z2]).float().unsqueeze(0).to(DEVICE)
+                    w_s = torch.concatenate((w,features), dim=-1)
                     x_hat = wavespace.decoder(w).to('cpu')
                     out = x_hat #* amp.to('cpu')
                     out = out.squeeze()

@@ -7,15 +7,15 @@ import os
 from pathlib import Path
 
 _USER_DATA = {'GHK': {'WANDB_ID': '6ec2335e1f6ce27570b1c7a53c2ad085a62f28fc',
-                     'PATH_BASE': '/content'},
+                     'PATH_BASE': '/Users/johnkim/Desktop/2023_2_MARG/wss_code'},
              'HZL': {'WANDB_ID': '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b',
                      'PATH_BASE': '/workspace'},
                      }
-_USER_CURRENT = 'GHK' #set as you before any operation
+_USER_CURRENT = 'HZL' #set as you before any operation
 PARENT_PATH = Path(_USER_DATA[_USER_CURRENT]['PATH_BASE']) #/content
 WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 #check: numworkers, wandb.
-TRAINING = True
+TRAINING = False
 CKPT_LOAD = False
 EXP_NAME = 'WSS_SPECTRAL_COND'
 NUM_WORKERS = 12
