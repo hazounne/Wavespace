@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 _USER_DATA = {'GHK': {'WANDB_ID': '6ec2335e1f6ce27570b1c7a53c2ad085a62f28fc',
-                     'PATH_BASE': '/usr/lib/mydir/'},
+                     'PATH_BASE': '/content'},
              'HZL': {'WANDB_ID': '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b',
                      'PATH_BASE': '/workspace'},
                      }

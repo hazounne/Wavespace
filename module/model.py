@@ -1,7 +1,7 @@
 from config import *
 from .blocks import *
 from funcs import *
-from .gan import GAN_module
+from .gan import GAN_module, MultiScaleDiscriminator
 
 import matplotlib.pyplot as plt
 from torch.fft import rfft as fft
@@ -30,17 +30,27 @@ class Wavespace(pl.LightningModule):
         self.decoder = decoder
         self.mu_w = torch.tensor(MU_W).to(DEVICE)
         self.logvar_w = torch.tensor(LOGVAR_W).to(DEVICE)
+        self.discriminator = MultiScaleDiscriminator(DISC_NUM)
         #self.prior = torch.zeros((BS,W_DIM)).to(DEVICE) #have same prior
+        
         #OPTIMIZERS
-        self.optim_1 = torch.optim.Adam(self.parameters(), betas=(0.9, 0.999), lr=LR)
-        self.optim_disc = torch.optim.Adam(self.parameters(), betas=(0.9, 0.999), lr=LR/10)
+#        self.optim_1 = torch.optim.Adam(self.parameters(), betas=(0.9, 0.999), lr=LR)
+#        self.optim_disc = torch.optim.Adam(self.parameters(), betas=(0.9, 0.999), lr=LR/10)
 
+        gen_p = list(self.encoder.parameters())
+        gen_p += list(self.decoder.parameters())
+        dis_p = list(self.discriminator.parameters())
+
+        self.gen_opt = torch.optim.Adam(gen_p, 1e-3, (.5, .9))
+        self.dis_opt = torch.optim.Adam(dis_p, 1e-4, (.5, .9))
+        self.gen_opt_scheduler = torch.optim.lr_scheduler.LinearLR(self.gen_opt, start_factor=1.0, end_factor=0.1, total_iters=WARM_UP_EPOCH)
+    
         #LR SCHEDULERS
-        if LOSS_SCHEDULE:
-            milestones = [3 ** i for i in range(7)]
-            gamma = 0.1 ** (1 / 7)
-            self.scheduler1 = lr_scheduler.MultiStepLR(self.optim_1, milestones=milestones, gamma=gamma)
-            self.schedulerdisc = lr_scheduler.MultiStepLR(self.optim_disc, milestones=milestones, gamma=gamma)
+#        if LOSS_SCHEDULE:
+#            milestones = [3 ** i for i in range(7)]
+#            gamma = 0.1 ** (1 / 7)
+#            self.scheduler1 = lr_scheduler.MultiStepLR(self.optim_1, milestones=milestones, gamma=gamma)
+#            #self.schedulerdisc = lr_scheduler.MultiStepLR(self.optim_disc, milestones=milestones, gamma=gamma)
 
         #MISC
         self.midi_to_hz = torch.Tensor([440 * (2 ** ((midi_pitch - 69) / 12)) for midi_pitch in range(128)]).to(DEVICE)
@@ -102,25 +112,25 @@ class Wavespace(pl.LightningModule):
             self.encoder.set_warmed_up(True)
             
         x, x_hat, mu_w, logvar_w, y = self(batches)
-        loss_dis, loss_gen = GAN_module(x, x_hat, self.current_epoch)
+        loss_dis, loss_gen = GAN_module(x, x_hat, self.current_epoch, self.discriminator)
         #loss
+
         if self.current_epoch <= WARM_UP_EPOCH or batch_idx%2 == 0: 
             loss = self.loss_function(x, x_hat, mu_w, logvar_w, y, 'train', loss_gen)
 
-            self.optim_1.zero_grad()
+            self.gen_opt.zero_grad()
             loss.backward(retain_graph=True)
-            self.optim_1.step()
+            self.gen_opt.step()
 
-            if LOSS_SCHEDULE: self.scheduler1.step()
+            if LOSS_SCHEDULE: self.gen_opt_scheduler.step()
         else: #discriminator loss
-            loss = loss_dis # 얘 옵티마이저 따로 해야할 것 같긴한데....
+            loss = loss_dis 
             if wandb.run != None:
                 wandb.log({f'Disc loss': loss})
 
-            self.optim_disc.zero_grad()
+            self.dis_opt.zero_grad()
             loss.backward(retain_graph=True)
-            self.optim_disc.step()
-            if LOSS_SCHEDULE: self.schedulerdisc.step()
+            self.dis_opt.step()
 
         #optimize
         

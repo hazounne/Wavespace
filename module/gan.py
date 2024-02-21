@@ -3,25 +3,28 @@ import torch.nn as nn
 import cached_conv as cc
 from torch.nn.utils import weight_norm
 
-def GAN_module(x_raw, y_raw, current_epoch):  
+def GAN_module(x_raw, y_raw, current_epoch, discriminator):  
     #x_raw: x
     #y_raw: x_hat
 
     if current_epoch > WARM_UP_EPOCH:
         xy = torch.cat([x_raw, y_raw], 0)
+        xy = torch.unsqueeze(xy, 1)
 
-        discriminator = MultiScaleDiscriminator(DISC_NUM)
         features = discriminator(xy)
 
         feature_real, feature_fake = split_features(features)
 
         loss_dis = 0
         loss_adv = 0
+        
 
         pred_real = 0
         pred_fake = 0
 
         feature_matching_fun = mean_difference
+        feature_matching_distance = 0.
+        
         for scale_real, scale_fake in zip(feature_real, feature_fake):
             current_feature_distance = sum(
                 map(
@@ -74,7 +77,7 @@ class MultiScaleDiscriminator(nn.Module):
             x = nn.functional.avg_pool1d(x, 2)
         return features
     
-def split_features(self, features):
+def split_features(features):
     feature_real = []
     feature_fake = []
     for scale in features:
