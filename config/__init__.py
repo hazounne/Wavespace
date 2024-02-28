@@ -17,8 +17,8 @@ WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 #check: numworkers, wandb.
 TRAINING = False
 CKPT_LOAD = False
-EXP_NAME = 'WSS_SPECTRAL_COND'
-NUM_WORKERS = 12
+EXP_NAME = 'WSS_VAE_1500'
+NUM_WORKERS = 11
 
 #SETTINGS
 if TRAINING:
@@ -27,7 +27,7 @@ if TRAINING:
 else:
     WANDB = 0
 EPOCH = 1500
-WARM_UP_EPOCH = 750 #투스텝 러닝
+WARM_UP_EPOCH = 1500 #VAE Epoch
 CKPT_NAME = f'{EXP_NAME}_{1}'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
@@ -106,7 +106,7 @@ nsynth_sub_B = [
     ('string', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
 ]
 
-if DATASET_TYPE=='WAVETABLE': WAVEFORMS = serum_sub2_B
+if DATASET_TYPE == 'WAVETABLE': WAVEFORMS = serum_sub2_B
 elif DATASET_TYPE == 'PLAY': WAVEFORMS = nsynth_sub_B #Conditions we use
 N_CONDS = len(WAVEFORMS)
 
@@ -221,6 +221,5 @@ else:
         k = random.randint(0,2**12)
         if k % 5 != 0: break
     CKPT_PATH = PARENT_PATH / f'wss/ckpt/{EXP_NAME}_{k}.pth'
-GPU_NUM = 3
-DEVICE = torch.device(f'cuda:{GPU_NUM}' if torch.cuda.is_available() else 'cpu')
 
+DEVICE = torch.device('cuda:12' if torch.cuda.is_available() else 'cpu')

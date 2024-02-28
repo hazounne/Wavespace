@@ -61,7 +61,7 @@ if __name__ == '__main__':
                     #amp = amp.to(DEVICE)
                     #amp = torch.tensor([z2]).float().unsqueeze(0).to(DEVICE)
                     w_s = torch.concatenate((w,features), dim=-1)
-                    x_hat = wavespace.decoder(w).to('cpu')
+                    x_hat = wavespace.decoder(w_s).to('cpu')
                     out = x_hat #* amp.to('cpu')
                     out = out.squeeze()
                 # axes[m,n].plot(x_hat.to('cpu'), linewidth=1)
