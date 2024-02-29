@@ -16,9 +16,9 @@ PARENT_PATH = Path(_USER_DATA[_USER_CURRENT]['PATH_BASE']) #/content
 WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 
 #check: numworkers, wandb.
-TRAINING = False
+TRAINING = True
 CKPT_LOAD = False
-EXP_NAME = 'WSS_VAE_3000'
+EXP_NAME = 'WSS_3000'
 NUM_WORKERS = 24
 
 #SETTINGS
@@ -27,7 +27,7 @@ if TRAINING:
     wandb.login(key=WANDB_ID)
 else:
     WANDB = 0
-EPOCH = 1
+EPOCH = 3000
 STAGE = 1
 CKPT_NAME = 'WSS_VAE_1500_1' #f'{EXP_NAME}_{1}'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
@@ -222,3 +222,8 @@ else:
 
 GPU_NUM = 12
 DEVICE = torch.device(f'cuda:{GPU_NUM}' if torch.cuda.is_available() else 'cpu')
+
+torch.manual_seed(42)
+np.random.seed(42)
+random.seed(42)
+if torch.cuda.is_available(): torch.cuda.manual_seed(42)
