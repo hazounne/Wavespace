@@ -21,7 +21,18 @@ if __name__ == '__main__':
     if CKPT_LOAD:
         load_ckpt = torch.load(CKPT_TEST)
         loaded_model_state_dict = load_ckpt['state_dict']
-        wavespace.load_state_dict(loaded_model_state_dict)
+        if STAGE == 1:
+            new_state_dict = wavespace.state_dict()
+            for key in new_state_dict.keys():
+                if not 'discriminator' in key:
+                    new_state_dict[key] = loaded_model_state_dict[key]
+            wavespace.load_state_dict(new_state_dict)
+        elif STAGE == 2: wavespace.load_state_dict(loaded_model_state_dict)
+
+        print(f"checkpoint_loaded:{CKPT_TEST}")
+    if STAGE == 2:
+        for param in wavespace.encoder.parameters():
+            param.requires_grad = False
 
 # Train and Validate
     trainer = pl.Trainer(max_epochs=EPOCH,
@@ -36,11 +47,12 @@ if __name__ == '__main__':
                 )
 
 ##### Save ckpt
-    ckpt = {
-        'state_dict': wavespace.state_dict(),
-    #   'optimizer_state_dict': OPTIMIZER.state_dict()
-    }
-    torch.save(ckpt, CKPT_PATH)
+    # ckpt = {
+    #     'state_dict': wavespace.state_dict(),
+    #    'optimizer_state_dict': OPTIMIZER.state_dict()
+    # }
+    # torch.save(ckpt, CKPT_PATH)
+    trainer.save_checkpoint(CKPT_PATH)
     print(f'CKPT saved to {CKPT_PATH}')
 
 ##### Test

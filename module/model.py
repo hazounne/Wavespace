@@ -31,11 +31,6 @@ class Wavespace(pl.LightningModule):
         self.mu_w = torch.tensor(MU_W).to(DEVICE)
         self.logvar_w = torch.tensor(LOGVAR_W).to(DEVICE)
         self.discriminator = MultiScaleDiscriminator(DISC_NUM)
-        #self.prior = torch.zeros((BS,W_DIM)).to(DEVICE) #have same prior
-        
-        #OPTIMIZERS
-#        self.optim_1 = torch.optim.Adam(self.parameters(), betas=(0.9, 0.999), lr=LR)
-#        self.optim_disc = torch.optim.Adam(self.parameters(), betas=(0.9, 0.999), lr=LR/10)
 
         gen_p = list(self.encoder.parameters())
         gen_p += list(self.decoder.parameters())
@@ -43,14 +38,8 @@ class Wavespace(pl.LightningModule):
 
         self.gen_opt = torch.optim.Adam(gen_p, 1e-3, (.5, .9))
         self.dis_opt = torch.optim.Adam(dis_p, 1e-4, (.5, .9))
-        self.gen_opt_scheduler = torch.optim.lr_scheduler.LinearLR(self.gen_opt, start_factor=1.0, end_factor=0.1, total_iters=WARM_UP_EPOCH)
-    
-        #LR SCHEDULERS
-#        if LOSS_SCHEDULE:
-#            milestones = [3 ** i for i in range(7)]
-#            gamma = 0.1 ** (1 / 7)
-#            self.scheduler1 = lr_scheduler.MultiStepLR(self.optim_1, milestones=milestones, gamma=gamma)
-#            #self.schedulerdisc = lr_scheduler.MultiStepLR(self.optim_disc, milestones=milestones, gamma=gamma)
+        if LOSS_SCHEDULE:
+            self.gen_opt_scheduler = torch.optim.lr_scheduler.LinearLR(self.gen_opt, start_factor=1.0, end_factor=0.1, total_iters=1500)
 
         #MISC
         self.midi_to_hz = torch.Tensor([440 * (2 ** ((midi_pitch - 69) / 12)) for midi_pitch in range(128)]).to(DEVICE)
@@ -108,14 +97,14 @@ class Wavespace(pl.LightningModule):
         else: return x, x_hat, mu_w, logvar_w, y
     
     def training_step(self, batches, batch_idx):
-        if self.current_epoch > WARM_UP_EPOCH:
+        if STAGE == 2:
             self.encoder.set_warmed_up(True)
             
         x, x_hat, mu_w, logvar_w, y = self(batches)
         loss_dis, loss_gen = GAN_module(x, x_hat, self.current_epoch, self.discriminator)
         #loss
 
-        if self.current_epoch <= WARM_UP_EPOCH or batch_idx%2 == 0: 
+        if STAGE == 1 or batch_idx%2 == 0: 
             loss = self.loss_function(x, x_hat, mu_w, logvar_w, y, 'train', loss_gen)
 
             self.gen_opt.zero_grad()
@@ -156,7 +145,7 @@ class Wavespace(pl.LightningModule):
         #L1_w = torch.sum(torch.abs(wave_difference), -1)
         L1 = L1_ms/BS #(L1_ms + L1_log)/BS
 
-        if self.current_epoch <= WARM_UP_EPOCH: # 1st 스텝러닝
+        if STAGE == 1:
             L2 = torch.sum(self.KL(
                         mu_w,
                         logvar_w,

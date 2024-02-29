@@ -10,15 +10,16 @@ _USER_DATA = {'GHK': {'WANDB_ID': '6ec2335e1f6ce27570b1c7a53c2ad085a62f28fc',
                      'PATH_BASE': '/Users/johnkim/Desktop/2023_2_MARG/wss_code'},
              'HZL': {'WANDB_ID': '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b',
                      'PATH_BASE': '/workspace'},
-                     }
+                    }
 _USER_CURRENT = 'HZL' #set as you before any operation
 PARENT_PATH = Path(_USER_DATA[_USER_CURRENT]['PATH_BASE']) #/content
 WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
+
 #check: numworkers, wandb.
 TRAINING = False
 CKPT_LOAD = False
-EXP_NAME = 'WSS_VAE_1500'
-NUM_WORKERS = 11
+EXP_NAME = 'WSS_VAE_3000'
+NUM_WORKERS = 24
 
 #SETTINGS
 if TRAINING:
@@ -26,14 +27,14 @@ if TRAINING:
     wandb.login(key=WANDB_ID)
 else:
     WANDB = 0
-EPOCH = 1500
-WARM_UP_EPOCH = 1500 #VAE Epoch
-CKPT_NAME = f'{EXP_NAME}_{1}'
+EPOCH = 1
+STAGE = 1
+CKPT_NAME = 'WSS_VAE_1500_1' #f'{EXP_NAME}_{1}'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
 DECODER_STYLE = 'SPECTRAL_SEPARATED'
-LOSS_SCHEDULE = True
+LOSS_SCHEDULE = True #0.001 -> 0.0001
 SUB_DIM = 2
 #################################################################
 
@@ -165,12 +166,10 @@ LAMBDA_ADVERSARIAL = 1 # GAN generator adversarial loss 람다
 
 #YAML
 if WANDB == "SWEEP":
-    N_SIDE_LAYER = config.N_SIDE_LAYER
     B1 = config.B1
     B2 = config.B2
     LR = config.LR
 else:
-    N_SIDE_LAYER = config['N_SIDE_LAYER']
     B1 = config['B1']
     B2 = config['B2']
     LR = config['LR']
@@ -193,10 +192,10 @@ DISC_NUM = 3
 #disc conv
 DISC_IN_SIZE = 1
 DISC_OUT_SIZE = 1
-DISC_CAPACITY = 64
-DISC_N_LAYERS = 4
+DISC_CAPACITY = 16 #32#64
+DISC_N_LAYERS = 5 #4
 DISC_STRIDE = 4
-DISC_KERNEL_SIZE = 15
+DISC_KERNEL_SIZE = 15 
 DISC_NORM_MODE = 'weight_norm'
 
 
@@ -210,7 +209,6 @@ if WANDB == 'TRAIN':
         "B1": B1,
         "B2": B2,
         "LR": LR,
-        "N_SIDE_LAYER": N_SIDE_LAYER,
         }
     )
 
@@ -222,4 +220,5 @@ else:
         if k % 5 != 0: break
     CKPT_PATH = PARENT_PATH / f'wss/ckpt/{EXP_NAME}_{k}.pth'
 
-DEVICE = torch.device('cuda:12' if torch.cuda.is_available() else 'cpu')
+GPU_NUM = 12
+DEVICE = torch.device(f'cuda:{GPU_NUM}' if torch.cuda.is_available() else 'cpu')

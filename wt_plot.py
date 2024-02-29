@@ -53,7 +53,7 @@ if __name__ == '__main__':
                     #w = torch.zeros_like(w).to(DEVICE)
                     w[0,2*C] = z1
                     #w[0,2*C+1] = z2
-                    features[0,0] = z2/9
+                    features[0,1] = z2/3
                     #pos = torch.tensor([[z2]]).float().to(DEVICE)
                     #print(f'W: {w}')
                     #print(f'pos: {pos}')
@@ -76,6 +76,6 @@ if __name__ == '__main__':
             folder_name = f'./fig/Z/{CKPT_NAME}/C{WAVEFORM_NAMES[C]}/Q{query}'
             if not os.path.exists(folder_name):
                 os.makedirs(folder_name)
-            directory = folder_name + f'/{r1}{r2}{num_x}x{num_y}.png'
+            directory = folder_name + f'/{r1}{r2}{num_x}x{num_y}_2.png'
             plt.savefig(directory)
             print(f'plot saved to {directory}')

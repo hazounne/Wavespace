@@ -2,12 +2,13 @@ from config import *
 import torch.nn as nn
 import cached_conv as cc
 from torch.nn.utils import weight_norm
+import wandb
 
 def GAN_module(x_raw, y_raw, current_epoch, discriminator):  
     #x_raw: x
     #y_raw: x_hat
 
-    if current_epoch > WARM_UP_EPOCH:
+    if STAGE == 2:
         xy = torch.cat([x_raw, y_raw], 0)
         xy = torch.unsqueeze(xy, 1)
 
@@ -18,7 +19,6 @@ def GAN_module(x_raw, y_raw, current_epoch, discriminator):
         loss_dis = 0
         loss_adv = 0
         
-
         pred_real = 0
         pred_fake = 0
 
@@ -36,7 +36,7 @@ def GAN_module(x_raw, y_raw, current_epoch, discriminator):
             feature_matching_distance = feature_matching_distance + current_feature_distance
 
             _dis, _adv = hinge_gan(scale_real[-1], scale_fake[-1])
-
+            
             pred_real = pred_real + scale_real[-1].mean()
             pred_fake = pred_fake + scale_fake[-1].mean()
 
@@ -45,6 +45,8 @@ def GAN_module(x_raw, y_raw, current_epoch, discriminator):
 
         feature_matching_distance = feature_matching_distance / len(
             feature_real)
+        if wandb.run != None:
+            wandb.log({"pred_real": pred_real.mean(), "pred_fake": pred_fake.mean()})
         
         loss_gen = {}
         loss_gen['feature_matching'] = LAMBDA_FEATURE_MATCHING * feature_matching_distance
@@ -96,6 +98,7 @@ class ConvNet(nn.Module):
         super().__init__()
         channels = [in_size]
         channels += list(capacity * 2**np.arange(n_layers))
+        channels[-1] = channels[-2]
 
         if isinstance(stride, int):
             stride = n_layers * [stride]
@@ -161,6 +164,7 @@ def mean_difference(target: torch.Tensor,
     
 def hinge_gan(score_real, score_fake):
     loss_dis = torch.relu(1 - score_real) + torch.relu(1 + score_fake)
+    #loss_dis = 2 - score_real + score_fake
     loss_dis = loss_dis.mean()
     loss_gen = -score_fake.mean()
     return loss_dis, loss_gen

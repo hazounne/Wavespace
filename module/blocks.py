@@ -147,9 +147,9 @@ class Encoder(nn.Module):
 
             # Fully connected (Dense) layer
             self.fc = nn.Linear(64, W_DIM*2)
-        
+       
         self.register_buffer("warmed_up", torch.tensor(0))
-
+ 
     def set_warmed_up(self, state):
         state = torch.tensor(int(state), device=self.warmed_up.device)
         self.warmed_up = state
