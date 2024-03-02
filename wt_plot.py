@@ -5,17 +5,22 @@ from module.dataset import DatasetBuilder
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    ##LOAD
+    ###CHECKPOINT LOAD###
     load_ckpt = torch.load(CKPT_TEST)
     loaded_model_state_dict = load_ckpt['state_dict']
-    #loaded_optimizer_state_dict = load_ckpt['optimizer_state_dict']
+    if STAGE == 1:
+        new_state_dict = wavespace.state_dict()
+        for key in new_state_dict.keys():
+            if not 'discriminator' in key:
+                new_state_dict[key] = loaded_model_state_dict[key]
+        wavespace.load_state_dict(new_state_dict)
+    elif STAGE == 2: wavespace.load_state_dict(loaded_model_state_dict)
 
-    wavespace = Wavespace()
-    wavespace.load_state_dict(loaded_model_state_dict)
-    wavespace = wavespace.to(DEVICE) #after train/test, the model automatically set to CPU
+    print(f"checkpoint_loaded:{CKPT_TEST}")
+    if STAGE == 2:
+        for param in wavespace.encoder.parameters():
+            param.requires_grad = False
     wavespace.eval()
-    #optimizer = optim.Adam(wavespace.parameters(), lr=0.001)
-    #optimizer.load_state_dict(loaded_optimizer_state_dict)
     db = DatasetBuilder(file_list=DATASETS[0])
 
     # Plot.

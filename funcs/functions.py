@@ -60,41 +60,41 @@ def get_padding(k, s=1, d=1, mode="centered") -> tuple:
         raise Exception(f"Padding mode {mode} is not valid")
     return (p_left, p_right)
 
-def dco_extractFeatures(single_cycle: torch.Tensor, tile_num=6):
-    single_cycle = single_cycle
-    waveform_length = len(single_cycle)
-    N = waveform_length * tile_num
+def get_semantic_conditions(x: torch.Tensor):
+    bs = x.shape[0]
+    waveform_length = x.shape[-1]
+    N = waveform_length #* tile_num
     Nh = N // 2 + 1
-    signal = single_cycle.tile((tile_num,))
+    signal = x #.tile((tile_num,))
     spec = fft.rfft(signal)
     # calculate power spectrum
     spec_pow = torch.real(spec * torch.conj(spec) / N)
 
-    total = sum(spec_pow)
-    if total == 0:
-        brightness = -1
-        richness = -1
-    else:
-        centroid = torch.sum(spec_pow * torch.linspace(0, 1, Nh)) / total
-        k = torch.tensor([5.5])
-        brightness = log(centroid * (torch.exp(k) - 1) + 1) / k
+    total = torch.sum(spec_pow, -1, keepdim=True)
 
-        spread = torch.sqrt(sum(spec_pow * (torch.linspace(0, 1, Nh) - centroid).pow(2)) / total)
-        k = torch.tensor([7.5])
-        richness = log(spread * (torch.exp(k) - 1) + 1) / k
+    centroid = torch.sum(spec_pow * torch.linspace(0, 1, Nh).to(DEVICE), -1, keepdim=True) / total
+    
+    k = torch.tensor([5.5]).to(DEVICE)
+    brightness = log(centroid * (torch.exp(k) - 1) + 1) / k
 
-        zero_crossing_rate = torch.where(torch.diff(torch.sign(single_cycle)))[0].shape[0] / waveform_length
-        k = torch.tensor([5.5])
-        noisiness = log(zero_crossing_rate * (torch.exp(k) - 1) + 1) / k
+    spread = torch.sqrt(torch.sum(spec_pow * (torch.linspace(0, 1, Nh).to(DEVICE).unsqueeze(0).tile((bs,1)) - centroid).pow(2), -1, keepdim=True) / total)
+    k = torch.tensor([7.5]).to(DEVICE)
+    richness = log(spread * (torch.exp(k) - 1) + 1) / k
 
-    # fullness
-    hf = N / waveform_length
+    difference = torch.sum(torch.sign(torch.diff(torch.diff(x))) != 0, -1) / (waveform_length-2)
+    k = torch.tensor([5.5]).to(DEVICE)
+    noisiness = log(difference * (torch.exp(k) - 1) + 1) / k
+    noisiness = noisiness.unsqueeze(1)
+
     hnumber = int(waveform_length / 2) - 1
-    all_harmonics = torch.sum(spec_pow[torch.round(hf * torch.linspace(1, hnumber, hnumber)).int()])
-    odd_harmonics = torch.sum(spec_pow[torch.round(hf * torch.linspace(1, hnumber, int(hnumber / 2))).int()])
-    if all_harmonics == 0:
-        fullness = 0
-    else:
-        fullness = torch.tensor([1 - odd_harmonics / all_harmonics])
+    odd_power = torch.sum(spec_pow[:, 1::2], -1, keepdim=True)
+    fullness = 1 - odd_power / total
+
+    symmetry = torch.angle(spec.sum(-1, keepdim=True))
+    
+    brightness[total==0] = -1
+    richness[total==0] = -1
+    noisiness[total==0] = -1
+    fullness[total==0] = -1
         
-    return torch.concat((brightness, richness, fullness, noisiness), dim=-1)
+    return torch.concat((brightness, richness, fullness, noisiness, symmetry), dim=-1)

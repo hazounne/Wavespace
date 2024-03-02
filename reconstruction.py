@@ -5,26 +5,31 @@ from module.dataset import DatasetBuilder
 import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
-    ##LOAD
+    wavespace = Wavespace().to(DEVICE)
+    ###CHECKPOINT LOAD###
     load_ckpt = torch.load(CKPT_TEST)
     loaded_model_state_dict = load_ckpt['state_dict']
-    # loaded_optimizer_state_dict = load_ckpt['optimizer_state_dict']
+    if STAGE == 1:
+        new_state_dict = wavespace.state_dict()
+        for key in new_state_dict.keys():
+            if not 'discriminator' in key:
+                new_state_dict[key] = loaded_model_state_dict[key]
+        wavespace.load_state_dict(new_state_dict)
+    elif STAGE == 2: wavespace.load_state_dict(loaded_model_state_dict)
 
-    wavespace = Wavespace()
-    wavespace.load_state_dict(loaded_model_state_dict)
-    wavespace = wavespace.to(DEVICE) #after train/test, the model automatically set to CPU
+    print(f"checkpoint_loaded:{CKPT_TEST}")
+    if STAGE == 2:
+        for param in wavespace.encoder.parameters():
+            param.requires_grad = False
     wavespace.eval()
     #optimizer = optim.Adam(wavespace.parameters(), lr=0.001)
     #optimizer.load_state_dict(loaded_optimizer_state_dict)
 
     # Plot.
-    domain = 'w'
     db = DatasetBuilder(file_list=DATASETS[0])
-
-
     with torch.no_grad():
         i_tensor = torch.tensor(1j, dtype=torch.complex64).to(DEVICE)
-        for C in range(18):
+        for C in [1]:
             fig, axes = plt.subplots(16,16,figsize=(80, 48))
             print(f'progress: {C}/17')
             for m in range(16):
@@ -38,40 +43,24 @@ if __name__ == '__main__':
                     indices = [index for index, value in enumerate(db.file_list) if value == x_path]
                     assert indices
                     i = indices[0]
-                    #print(i)
-
                     datum = list(db[i])
-                    #x = torch.exp(-datum[0])
                     x = datum[0]
-
-                    if domain == 'w':
-                        axes[m,n].plot(x.cpu())
-                    else:
-                        x = (x-torch.min(x))/(torch.max(x)-torch.min(x)) 
-                        axes[m,n].plot(x)
-
+                    axes[m,n].plot(x.cpu())
                     for j in range(len(datum)):
                         if isinstance(datum[j], int):
                             datum[j] = torch.Tensor([datum[j]]).to(torch.int64).to(DEVICE)
                         else: datum[j] = datum[j].reshape(1,-1).to(DEVICE)
-                    x, y, amp, pos, features = tuple(datum)
+                    x, y, amp, pos = tuple(datum)
                     mu_w, logvar_w = wavespace.encoder(x) #x, x_hat, mu_w, logvar_w, y
                     w = mu_w
-                    w = torch.concatenate((w,features.unsqueeze(0).to(DEVICE)), dim=-1)
+                    w = torch.concatenate((w,get_semantic_conditions(x)), dim=-1)
                     x_hat = wavespace.decoder(w)
                     x_hat = x_hat.squeeze()
-                    if domain == 'w':
-                        axes[m,n].plot(x_hat.cpu())
-                    else:
-                        x_hat = (x_hat-torch.min(x_hat))/(torch.max(x_hat)-torch.min(x_hat)) 
-                        axes[m,n].plot(x_hat.to('cpu'))
-                    #axes[m,n].set_title(f"w = {w_1}, {w_2}")
-                    axes[m,n].set_xticks([])
-                    axes[m,n].set_yticks([])
-                    axes[m,n].grid(True)
-            #print(f'w={w.tolist()}')
+                    axes[m,n].plot(x_hat.cpu())
             plt.tight_layout()
-            directory = f'wss/fig/R_{CKPT_NAME}_{c}.png'
+            folder_name = f'./fig/R/{CKPT_NAME}'
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+            directory = folder_name + f'/{WAVEFORM_NAMES[C]}.png'
             plt.savefig(directory)
-            plt.clf()
             print(f'plot saved to {directory}')

@@ -13,7 +13,7 @@ from torch.optim import lr_scheduler
 import torch
 import pytorch_lightning as pl
 from itertools import chain
-
+from math import exp
 from time import time as T
 
 # Wavespace: Explorable Wavetable Synthesizer
@@ -40,11 +40,8 @@ class Wavespace(pl.LightningModule):
         self.dis_opt = torch.optim.Adam(dis_p, 1e-4, (.5, .9))
         if LOSS_SCHEDULE:
             self.gen_opt_scheduler = torch.optim.lr_scheduler.LinearLR(self.gen_opt, start_factor=1.0, end_factor=0.1, total_iters=1500)
-
         #MISC
-        self.midi_to_hz = torch.Tensor([440 * (2 ** ((midi_pitch - 69) / 12)) for midi_pitch in range(128)]).to(DEVICE)
         self.i_tensor = torch.tensor(1j, dtype=torch.complex64).to(DEVICE)
-        self.k = 0.002  # Tunable parameter for the rate of increase
 
     def sampling(self, mu, log_var):
         std = torch.exp(0.5*log_var)
@@ -62,14 +59,15 @@ class Wavespace(pl.LightningModule):
     def forward(self, batches, gen=False):
         #Encode
         if DATASET_TYPE == 'WAVETABLE':
-            x, y, pos, amp, sc = batches
-            pos = pos.reshape(-1,1)
+            x, y, pos, amp = batches
+            #pos = pos.reshape(-1,1)
         elif DATASET_TYPE == 'PLAY':
-            x, f0, amp = play_preprocess(x, f_s=16000, n=X_DIM, f_0='crepe') #round(`midi_to_hz`(pitch)))
+            x, f0, amp = play_preprocess(x, f_s=16000, n=X_DIM, f_0='crepe')
         mu_w, logvar_w = self.encoder(x)
         w = self.sampling(mu_w, logvar_w)
         #Decode
         if DATASET_TYPE == 'WAVETABLE':
+            sc = get_semantic_conditions(x)
             w_sc = torch.cat((w, sc), dim=-1)
             x_hat = self.decoder(w_sc)
         elif DATASET_TYPE == 'PLAY': x_hat = self.decoder(w, amp, f0)
@@ -80,19 +78,6 @@ class Wavespace(pl.LightningModule):
             'xhatvar': (torch.std(x_hat,dim=0)),
             })
 
-            # if self.global_step == 10:
-            #     data = [[x, y] for (x, y)
-            #             in zip(list(range(1024)), x_hat[0,:].cpu().detach().numpy().tolist())
-            #             ]
-            #     table = wandb.Table(data=data, columns=["x", "y"])
-            #     wandb.log(
-            #         {
-            #             "my_custom_plot_id": wandb.plot.line(
-            #                 table, "x", "y", title="Plot"
-            #             )
-            #         }
-            #     )
-
         if gen: return x_hat
         else: return x, x_hat, mu_w, logvar_w, y
     
@@ -102,78 +87,81 @@ class Wavespace(pl.LightningModule):
             
         x, x_hat, mu_w, logvar_w, y = self(batches)
         loss_dis, loss_gen = GAN_module(x, x_hat, self.current_epoch, self.discriminator)
-        #loss
+        #LOSS
 
         if STAGE == 1 or batch_idx%2 == 0: 
-            loss = self.loss_function(x, x_hat, mu_w, logvar_w, y, 'train', loss_gen)
+            LOSS = self.loss_function(x, x_hat, mu_w, logvar_w, y, 'train', loss_gen)
 
             self.gen_opt.zero_grad()
-            loss.backward(retain_graph=True)
+            LOSS.backward(retain_graph=True)
             self.gen_opt.step()
 
             if LOSS_SCHEDULE: self.gen_opt_scheduler.step()
-        else: #discriminator loss
-            loss = loss_dis 
+        else: #discriminator LOSS
+            LOSS = loss_dis 
             if wandb.run != None:
-                wandb.log({f'Disc loss': loss})
+                wandb.log({f'Disc LOSS': LOSS})
 
             self.dis_opt.zero_grad()
-            loss.backward(retain_graph=True)
+            LOSS.backward(retain_graph=True)
             self.dis_opt.step()
 
         #optimize
         
-        return loss
+        return LOSS
 
     def gen(self, x):
         x_hat = self(x, gen=True)
         return x_hat
-
-    def kl_annealing_schedule(self, epoch, max_epochs):
-        #a sigmoid function
-        return 2 / (1 + np.exp(-self.k * (epoch - max_epochs) / 2))
     
     def loss_function(self, x, x_hat,
                       mu_w, logvar_w, y,
                       process='train', loss_gen=None):
 
-        x_fft, x_hat_fft = torch.abs(fft(x)), torch.abs(fft(x_hat))
-        spectral_difference = x_fft - x_hat_fft
-        #wave_difference = x- x_hat
-        L1_ms = torch.sum(spectral_difference.pow(2), -1)
-        #L1_log = torch.sum(log(torch.abs(spectral_difference)), -1) #*BETA
-        #L1_w = torch.sum(torch.abs(wave_difference), -1)
-        L1 = L1_ms/BS #(L1_ms + L1_log)/BS
-
+        SPECTRAL_LOSS_BATCH = torch.sum((fft(x).abs() - fft(x_hat).abs()).pow(2), -1)/BS
+        WAVEFORM_LOSS_BATCH = torch.sum(torch.abs(x - x_hat), -1)/BS
+        SEMANTIC_LOSS_BATCH = torch.sum(get_semantic_conditions(x)-get_semantic_conditions(x_hat), -1).abs()/BS
         if STAGE == 1:
-            L2 = torch.sum(self.KL(
+            KL_LOSS = torch.sum(self.KL(
                         mu_w,
                         logvar_w,
                         self.mu_w[y],
                         self.logvar_w[y],).unsqueeze(1), -1)
-            L4 = 0
-            L5 = 0
-        else: # 2nd 스텝 러닝
-            L2 = 0
-            L4 = loss_gen['feature_matching']
-            L5 = loss_gen['adversarial']
+            FEATURE_MATCHING_LOSS = 0
+            ADVERSARIAL_LOSS = 0
+        else: # GAN_LOSS
+            KL_LOSS = 0
+            FEATURE_MATCHING_LOSS = loss_gen['feature_matching']
+            ADVERSARIAL_LOSS = loss_gen['adversarial']
 
-        L3 = torch.sum(torch.abs(x - x_hat), -1)
+        SPECTRAL_LOSS = torch.sum(SPECTRAL_LOSS_BATCH)
+        WAVEFORM_LOSS = torch.sum(WAVEFORM_LOSS_BATCH)        
+        SEMANTIC_LOSS = torch.sum(SEMANTIC_LOSS_BATCH)
+        WAVEFORM_LOSS_COEF_MULTIPLIED = WAVEFORM_LOSS_COEF * (1 + exp(-self.current_epoch * WAVEFORM_LOSS_DECREASE_RATE) * (WAVEFORM_LOSS_MULTIPLIER - 1))
+        LOSS = (SPECTRAL_LOSS_COEF * SPECTRAL_LOSS_BATCH
+                + WAVEFORM_LOSS_COEF_MULTIPLIED * WAVEFORM_LOSS_BATCH
+                + SEMANTIC_LOSS_COEF * SEMANTIC_LOSS_BATCH
+                + KL_LOSS_COEF * KL_LOSS
+                + FEATURE_MATCHING_LOSS
+                + ADVERSARIAL_LOSS).sum()
 
-        loss = (B1 * L1 #RECON
-                + B2 * L2 #KL
-                + L3 + L4 + L5).sum()
-        
+        KL = torch.sum(KL_LOSS)
         if wandb.run != None:
-            wandb.log({f'L1': L1,
-                       f'L2': L2,
-                       f'L3': L3,
-                       f'L4': L4,
-                       f'L5': L5,
-                       f'{process}_Loss': loss,
+            wandb.log({f'SPECTRAL_LOSS_BATCH': SPECTRAL_LOSS_BATCH,
+                       f'WAVEFORM_LOSS_BATCH': WAVEFORM_LOSS_BATCH,
+                       f'SEMANTIC_LOSS_BATCH': SEMANTIC_LOSS_BATCH,
+                       f'SPECTRAL_LOSS': SPECTRAL_LOSS,
+                       f'WAVEFORM_LOSS': WAVEFORM_LOSS,
+                       f'SEMANTIC_LOSS': SEMANTIC_LOSS,
+                       f'RECONSTRUCTION_LOSS': SPECTRAL_LOSS + WAVEFORM_LOSS,
+                       f'KL_LOSS': KL_LOSS,
+                       f'FEATURE_MATCHING_LOSS': FEATURE_MATCHING_LOSS,
+                       f'ADVERSARIAL_LOSS': ADVERSARIAL_LOSS,
+                       f'{process}_LOSS': LOSS,
+                       f'WAVEFORM_LOSS_COEF_MULTIPLIED': WAVEFORM_LOSS_COEF_MULTIPLIED,
                        })
-        assert not (torch.isnan(loss).any())
-        return loss
+        assert not (torch.isnan(LOSS).any())
+        return LOSS
 
     def configure_optimizers(self):
         pass

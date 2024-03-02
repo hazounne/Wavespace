@@ -16,20 +16,22 @@ PARENT_PATH = Path(_USER_DATA[_USER_CURRENT]['PATH_BASE']) #/content
 WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 
 #check: numworkers, wandb.
-TRAINING = True
+TRAINING = 'TRAIN'
 CKPT_LOAD = False
-EXP_NAME = 'WSS_3000'
+EXP_NAME = 'WSS_added_phase_semantic_loss'
 NUM_WORKERS = 24
 
 #SETTINGS
-if TRAINING:
+if TRAINING == 'SWEEP':
+    WANDB = 'SWEEP'
+elif TRAINING:
     WANDB = 'TRAIN'
     wandb.login(key=WANDB_ID)
 else:
     WANDB = 0
-EPOCH = 3000
+EPOCH = 1500
 STAGE = 1
-CKPT_NAME = 'WSS_VAE_1500_1' #f'{EXP_NAME}_{1}'
+CKPT_NAME = f'{EXP_NAME}_{1}'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
@@ -166,14 +168,23 @@ LAMBDA_ADVERSARIAL = 1 # GAN generator adversarial loss 람다
 
 #YAML
 if WANDB == "SWEEP":
-    B1 = config.B1
-    B2 = config.B2
+    SPECTRAL_LOSS_COEF = config.SPECTRAL_LOSS_COEF
+    WAVEFORM_LOSS_COEF = config.WAVEFORM_LOSS_COEF
+    SEMANTIC_LOSS_COEF = config.SEMANTIC_LOSS_COEF
+    KL_LOSS_COEF = config.KL_LOSS_COEF
     LR = config.LR
+    SEED = config.SEED
+    WAVEFORM_LOSS_MULTIPLIER = config.WAVEFORM_LOSS_MULTIPLIER
+    WAVEFORM_LOSS_DECREASE_RATE = config.WAVEFORM_LOSS_DECREASE_RATE
 else:
-    B1 = config['B1']
-    B2 = config['B2']
+    SPECTRAL_LOSS_COEF = config['SPECTRAL_LOSS_COEF']
+    WAVEFORM_LOSS_COEF = config['WAVEFORM_LOSS_COEF']
+    SEMANTIC_LOSS_COEF = config['SEMANTIC_LOSS_COEF']
+    KL_LOSS_COEF = config['KL_LOSS_COEF']
     LR = config['LR']
-
+    SEED = config['SEED']
+    WAVEFORM_LOSS_MULTIPLIER = config['WAVEFORM_LOSS_MULTIPLIER']
+    WAVEFORM_LOSS_DECREASE_RATE = config['WAVEFORM_LOSS_DECREASE_RATE']
 if not LOSS_SCHEDULE: LR = LR//10
 
 W_VAR = np.log(0.7) #small value
@@ -184,7 +195,7 @@ DEC_H = [512, 256, 128, 64, 32, 16, 8]
 DEC_K = [4, 8, 8, 5, 5, 2]
 DEC_S = [2, 3, 3, 3, 3, 2]
 LATENT_LEN = N_CONDS*SUB_DIM
-SEMENTIC_CONDITION_LEN = 4
+SEMANTIC_CONDITION_LEN = 5
 RES_BLOCK_CONV_NUM = 3
 
 #Discriminator
@@ -206,9 +217,14 @@ if WANDB == 'TRAIN':
         
         #track hyperparameters and run metadata
         config={
-        "B1": B1,
-        "B2": B2,
+        "SPECTRAL_LOSS_COEF": SPECTRAL_LOSS_COEF,
+        "WAVEFORM_LOSS_COEF": WAVEFORM_LOSS_COEF,
+        "SEMANTIC_LOSS_COEF": SEMANTIC_LOSS_COEF,
+        "KL_LOSS_COEF": KL_LOSS_COEF,
         "LR": LR,
+        "SEED": SEED,
+        "WAVEFORM_LOSS_MULTIPLIER": WAVEFORM_LOSS_MULTIPLIER,
+        "WAVEFORM_LOSS_DECREASE_RATE": WAVEFORM_LOSS_DECREASE_RATE,
         }
     )
 
@@ -223,7 +239,20 @@ else:
 GPU_NUM = 12
 DEVICE = torch.device(f'cuda:{GPU_NUM}' if torch.cuda.is_available() else 'cpu')
 
-torch.manual_seed(42)
-np.random.seed(42)
-random.seed(42)
-if torch.cuda.is_available(): torch.cuda.manual_seed(42)
+def set_seed(seed):
+    # Set the random seed for PyTorch on CPU and GPU
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # If using multi-GPU
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    # Set the random seed for NumPy
+    np.random.seed(seed)
+
+    # Set the random seed for Python's built-in random module
+    random.seed(seed)
+
+# Example usage:
+random_seed = SEED  # Choose any integer value as the random seed
+set_seed(random_seed)

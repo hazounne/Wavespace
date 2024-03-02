@@ -4,13 +4,24 @@ from config import *
 from collections import deque as dq
 import matplotlib.pyplot as plt
 if __name__ == '__main__':
+    wavespace = Wavespace().to(DEVICE)
+    ###CHECKPOINT LOAD###
     load_ckpt = torch.load(CKPT_TEST)
     loaded_model_state_dict = load_ckpt['state_dict']
-    wavespace = Wavespace()
-    wavespace.load_state_dict(loaded_model_state_dict)
-    wavespace = wavespace.to(DEVICE)
-    db = DatasetBuilder(file_list=DATASETS[0])
+    if STAGE == 1:
+        new_state_dict = wavespace.state_dict()
+        for key in new_state_dict.keys():
+            if not 'discriminator' in key:
+                new_state_dict[key] = loaded_model_state_dict[key]
+        wavespace.load_state_dict(new_state_dict)
+    elif STAGE == 2: wavespace.load_state_dict(loaded_model_state_dict)
+
+    print(f"checkpoint_loaded:{CKPT_TEST}")
+    if STAGE == 2:
+        for param in wavespace.encoder.parameters():
+            param.requires_grad = False
     wavespace.eval()
+
     out = torch.empty(0)
     C, Q = 17, 5
     print(f'Query:{WAVEFORM_NAMES[Q]}, Condition:{WAVEFORM_NAMES[C]}')

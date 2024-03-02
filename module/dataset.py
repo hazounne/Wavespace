@@ -98,18 +98,13 @@ class DatasetBuilder(Dataset):
   def transform(self, filename, x, f_s):
 
     if DATASET_TYPE == 'WAVETABLE':
-
       # normalise
       x = x[::2] #2048 -> 1024
       amp = (torch.sum(x.pow(2), dim=-1).sqrt().unsqueeze(-1))
       x /= amp
       x *= NORMALISED_ENERGY
-      # x = torch.clamp(x, min=0, max=1)
-
       y, pos = filename_parse(filename).values() # should be correspond to
-      #f0 = torch.ones(1) * 440 #arbitrary
-      features = dco_extractFeatures(x, tile_num=6)
-      return x, y, amp, pos, features
+      return x, y, amp, pos
 
     elif DATASET_TYPE == 'PLAY':
       y, method, pitch, velocity = filename_parse(filename).values()
