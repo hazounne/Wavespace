@@ -21,12 +21,16 @@ if __name__ == '__main__':
         for param in wavespace.encoder.parameters():
             param.requires_grad = False
     wavespace.eval()
-    #optimizer = optim.Adam(wavespace.parameters(), lr=0.001)
-    #optimizer.load_state_dict(loaded_optimizer_state_dict)
 
-    # Plot.
-    db = DatasetBuilder(file_list=DATASETS[0])
-    div = 18*256
+    train_databuilders, test_databuilders, _,_,_,_ = data_build(
+    DATASETS,
+    [9], #1:train 0:test -1:valid, X:pass, else:n-fold
+    BS=BS,
+    loaderonly=False
+    )
+
+    db = train_databuilders[0]
+    num_of_data = len(db)
     wMAE = 0
     wMSE = 0
     sMAE = 0
@@ -35,36 +39,20 @@ if __name__ == '__main__':
         i_tensor = torch.tensor(1j, dtype=torch.complex64).to(DEVICE)
         for C in range(18):
             print(f'progress: {C}/17')
-            for n in range(16):
-                num = str(n+1+10**3)[1:]
-                c = f'{WAVEFORM_NAMES[C]}_{num}' #Condition
-                #print(c)
-                #x_path = PARENT_PATH / f'wss/SerumDataset/{c}.wav'
-                x_path = f'/workspace/wss/SerumDataset/{c}.wav'
-                
-                indices = [index for index, value in enumerate(db.file_list) if value == x_path]
-                if not indices:
-                    print(n)
-                    assert indices
-                i = indices[0]
-                datum = list(db[i])
-                x = datum[0]
-                for j in range(len(datum)):
-                    if isinstance(datum[j], int):
-                        datum[j] = torch.Tensor([datum[j]]).to(torch.int64).to(DEVICE)
-                    else: datum[j] = datum[j].reshape(1,-1).to(DEVICE)
-                x, y, amp, pos, features = tuple(datum)
+            for i in range(num_of_data):
+                x = db[i]
+                x = x[0].unsqueeze(0).to(DEVICE)
                 mu_w, logvar_w = wavespace.encoder(x) #x, x_hat, mu_w, logvar_w, y
                 w = mu_w
-                w = torch.concatenate((w,features.to(DEVICE)), dim=-1)
+                w = torch.concatenate((w,get_semantic_conditions(x)), dim=-1)
                 x_hat = wavespace.decoder(w)
                 x_hat = x_hat.squeeze()
-                wMAE += torch.sum((x - x_hat).abs()).item()/div
-                wMSE += torch.sum((x - x_hat).pow(2)).item()/div
+                wMAE += torch.sum((x - x_hat).abs()).item()/num_of_data
+                wMSE += torch.sum((x - x_hat).pow(2)).item()/num_of_data
                 x_s = fft.fft(x).abs()
                 x_hat_s = fft.fft(x_hat).abs()
-                sMAE += torch.sum((x_s - x_hat_s).abs()).item()/div
-                sMSE += torch.sum((x_s - x_hat_s).pow(2)).item()/div
+                sMAE += torch.sum((x_s - x_hat_s).abs()).item()/num_of_data
+                sMSE += torch.sum((x_s - x_hat_s).pow(2)).item()/num_of_data
         print(f'wMAE = {wMAE}')
         print(f'wMSE = {wMSE}')
         print(f'sMAE = {sMAE}')

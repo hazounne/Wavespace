@@ -9,7 +9,7 @@ torch.cuda.empty_cache()
 
 train_loaders, test_loaders, val_loaders = data_build(
     DATASETS,
-    [1], #1:train 0:test -1:valid, X:pass, else:n-fold
+    [9], #1:train 0:test -1:valid, X:pass, else:n-fold
     BS=BS,
     loaderonly=True
     )
@@ -17,7 +17,7 @@ train_loaders, test_loaders, val_loaders = data_build(
 if __name__ == '__main__':
     wavespace = Wavespace().to(DEVICE)
     print(wavespace)
-    ###CHECKPOINT LOAD###
+# Load Checkpoint.
     if CKPT_LOAD:
         load_ckpt = torch.load(CKPT_TEST)
         loaded_model_state_dict = load_ckpt['state_dict']
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         for param in wavespace.encoder.parameters():
             param.requires_grad = False
 
-# Train and Validate
+# Train.
     trainer = pl.Trainer(max_epochs=EPOCH,
                          accelerator='gpu',
                          devices=[GPU_NUM],
@@ -43,7 +43,6 @@ if __name__ == '__main__':
                          )
     trainer.fit(wavespace,
                 train_dataloaders=train_loaders[0],
-                #val_dataloaders=val_loaders[0],
                 )
 
 ##### Save ckpt

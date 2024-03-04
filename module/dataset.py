@@ -4,7 +4,7 @@ import os
 import torch
 import torchaudio
 import re
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 from torch.fft import rfft
 
 '''
@@ -12,9 +12,14 @@ from torch.fft import rfft
 data_folders
 -> collapse (DATASETS from module.__init__)
 -> DatasetBuilder
--> loaders(assigned in experiment): concat each datum in the list
+-> data_loader(assigned in experiment): concat each datum in the list
 '''
 
+# 데이터 로더 생성
+# train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+# val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
+
+# Load the list consisting of each data directory.
 def collapse(data_folders:list) -> list:
   # saves all the directories
   output_file_lists = list()
@@ -30,16 +35,16 @@ def collapse(data_folders:list) -> list:
     output_file_lists.append(dir_list)
   return output_file_lists
 
+# Pick up desired directory.
 def filename_filter(**kwargs) -> bool:
-  # filters that pick up desired directory
   if DATASET_TYPE == 'PLAY':
     return (kwargs['y'] != -1)
   elif DATASET_TYPE == 'WAVETABLE':
     return (kwargs['y'] != -1)
 
 
+# file directory -> args
 def filename_parse(directory):
-  # file directory -> args
   if DATASET_TYPE == 'PLAY':
     pattern = re.compile(r"([A-Za-z]+)_([A-Za-z]+)_([0-9]+)-([0-9]+)-([0-9]+)\.wav", re.IGNORECASE)
     match = re.search(pattern, directory)
@@ -75,15 +80,9 @@ class DatasetBuilder(Dataset):
   # this is a child class of torch.utils.data.Dataset.
   # this class is the definition of dataset.
 
-  def __init__(self, file_list=None, train=0, path=None, fold=None): #fold: train, test fold
-    self.train = train #if it's a training dataset
+  def __init__(self, file_list=None, path=None):
     self.path = path
-    if fold:
-      if self.train:
-        self.file_list = file_list[:(fold-1)*len(file_list)//fold]
-      else:
-        self.file_list = file_list[(fold-1)*len(file_list)//fold:]
-    else: self.file_list = file_list
+    self.file_list = file_list
 
   def __len__(self):
     return len(self.file_list)
@@ -112,13 +111,7 @@ class DatasetBuilder(Dataset):
       wave = x[ind:ind+RAW_LEN]
       return wave.float(), y, pitch, velocity
 
-# def filename_to_y(filename: str, waveform_names: list) -> int:
-#   for i, name in enumerate(waveform_names):
-#     if name in filename:
-#       return i
-#   return N_CONDS-1 #no cond -> assign to the last one
-
-def data_build(li, folds, BS, loaderonly=True, num_workers=NUM_WORKERS) -> tuple:
+def data_build(datasets, folds, BS, loaderonly=True, num_workers=NUM_WORKERS) -> tuple:
   '''
   fold : function
   -------------
@@ -129,33 +122,39 @@ def data_build(li, folds, BS, loaderonly=True, num_workers=NUM_WORKERS) -> tuple
   else : n-fold
   -------------
   '''
-  train_li, test_li, val_li, train_loaders, test_loaders, val_loaders = [], [], [], [], [], []
-  for ind, dataset in enumerate(li):
+  train_databuilders, test_databuilders, val_databuilders, train_loaders, test_loaders, val_loaders = [], [], [], [], [], []
+  for ind, dataset in enumerate(datasets):
     if folds[ind] == 'X': continue
     elif folds[ind] == 1: #train
-      c = DatasetBuilder(file_list=dataset, train=1)
-      train_li.append(c)
-      train_loaders.append(DataLoader(dataset=c, batch_size=BS, drop_last=True, shuffle=True, num_workers=num_workers))
+      current_databuilder = DatasetBuilder(file_list=dataset, train=1)
+      train_databuilders.append(current_databuilder)
+      train_loaders.append(DataLoader(dataset=current_databuilder, batch_size=BS, drop_last=True, shuffle=True, num_workers=num_workers))
       
     elif folds[ind] == 0: #test
-      c = DatasetBuilder(file_list=dataset)
-      test_li.append(c)
-      test_loaders.append(DataLoader(dataset=c, batch_size=BS, drop_last=True, shuffle=False, num_workers=num_workers))
+      current_databuilder = DatasetBuilder(file_list=dataset)
+      test_databuilders.append(current_databuilder)
+      test_loaders.append(DataLoader(dataset=current_databuilder, batch_size=BS, drop_last=True, shuffle=False, num_workers=num_workers))
       
     elif folds[ind] == -1: #valid
-      c = DatasetBuilder(file_list=dataset)
-      val_li.append(c)
-      val_loaders.append(DataLoader(dataset=c, batch_size=BS, drop_last=True, shuffle=False, num_workers=num_workers))
+      current_databuilder = DatasetBuilder(file_list=dataset)
+      val_databuilders.append(current_databuilder)
+      val_loaders.append(DataLoader(dataset=current_databuilder, batch_size=BS, drop_last=True, shuffle=False, num_workers=num_workers))
       
     else:
       assert (type(folds[ind]) is int) and (folds[ind] >= 2)
+      train_size = int((folds[ind]/10) * len(dataset))
+      test_size = len(dataset) - train_size
+      train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
 
-      c = DatasetBuilder(file_list=dataset, train=1, fold=folds[ind])
-      train_li.append(c)
-      train_loaders.append(DataLoader(dataset=c, batch_size=BS, drop_last=True, shuffle=True, num_workers=num_workers))
-      c = DatasetBuilder(file_list=dataset, fold=folds[ind])
-      val_li.append(c)
-      val_loaders.append(DataLoader(dataset=c, batch_size=BS, drop_last=True, shuffle=False, num_workers=num_workers))
+      train_databuilder = DatasetBuilder(file_list=train_dataset)
+      train_databuilders.append(train_databuilder)
+      print(len(train_databuilder))
+      train_loaders.append(DataLoader(dataset=train_databuilder, batch_size=BS, drop_last=True, shuffle=True, num_workers=num_workers))
+
+      test_databuilder = DatasetBuilder(file_list=test_dataset)
+      test_databuilders.append(test_databuilder)
+      print(len(test_databuilder))
+      test_loaders.append(DataLoader(dataset=test_databuilder, batch_size=BS, drop_last=True, shuffle=False, num_workers=num_workers))
 
   if loaderonly: return train_loaders, test_loaders, val_loaders
-  else: return train_li, test_li, val_li, train_loaders, test_loaders, val_loaders
+  else: return train_databuilders, test_databuilders, val_databuilders, train_loaders, test_loaders, val_loaders

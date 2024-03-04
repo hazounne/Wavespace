@@ -29,7 +29,7 @@ if __name__ == '__main__':
     db = DatasetBuilder(file_list=DATASETS[0])
     with torch.no_grad():
         i_tensor = torch.tensor(1j, dtype=torch.complex64).to(DEVICE)
-        for C in [1]:
+        for C in [1,2]:
             fig, axes = plt.subplots(16,16,figsize=(80, 48))
             print(f'progress: {C}/17')
             for m in range(16):

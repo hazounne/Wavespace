@@ -81,10 +81,10 @@ def get_semantic_conditions(x: torch.Tensor):
     k = torch.tensor([7.5]).to(DEVICE)
     richness = log(spread * (torch.exp(k) - 1) + 1) / k
 
-    difference = torch.sum(torch.sign(torch.diff(torch.diff(x))) != 0, -1) / (waveform_length-2)
+    difference = torch.sum((torch.diff(x)).abs(), -1, keepdim=True) / (waveform_length-1)
     k = torch.tensor([5.5]).to(DEVICE)
     noisiness = log(difference * (torch.exp(k) - 1) + 1) / k
-    noisiness = noisiness.unsqueeze(1)
+    noisiness = noisiness
 
     hnumber = int(waveform_length / 2) - 1
     odd_power = torch.sum(spec_pow[:, 1::2], -1, keepdim=True)
@@ -92,9 +92,9 @@ def get_semantic_conditions(x: torch.Tensor):
 
     symmetry = torch.angle(spec.sum(-1, keepdim=True))
     
-    brightness[total==0] = -1
-    richness[total==0] = -1
-    noisiness[total==0] = -1
-    fullness[total==0] = -1
+    brightness[total == 0] = -1
+    richness[total == 0] = -1
+    noisiness[total == 0] = -1
+    fullness[total == 0] = -1
         
     return torch.concat((brightness, richness, fullness, noisiness, symmetry), dim=-1)

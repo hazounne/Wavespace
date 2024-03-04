@@ -120,7 +120,14 @@ class Wavespace(pl.LightningModule):
 
         SPECTRAL_LOSS_BATCH = torch.sum((fft(x).abs() - fft(x_hat).abs()).pow(2), -1)/BS
         WAVEFORM_LOSS_BATCH = torch.sum(torch.abs(x - x_hat), -1)/BS
-        SEMANTIC_LOSS_BATCH = torch.sum(get_semantic_conditions(x)-get_semantic_conditions(x_hat), -1).abs()/BS
+        SEMANTIC_LOSS_BATCH = (get_semantic_conditions(x) - get_semantic_conditions(x_hat)).abs()
+
+        # Compute the column-wise minimum operation
+        PHASE_LOSS_BATCH = torch.minimum(2 * torch.pi - SEMANTIC_LOSS_BATCH[:, 4], SEMANTIC_LOSS_BATCH[:, 4]) / BS
+        NOISE_LOSS_BATCH = SEMANTIC_LOSS_BATCH[:, 3] / BS
+
+        # Calculate the sum along the last dimension
+        SEMANTIC_LOSS_BATCH = torch.sum(SEMANTIC_LOSS_BATCH[:,:3], dim=-1) / BS
         if STAGE == 1:
             KL_LOSS = torch.sum(self.KL(
                         mu_w,
@@ -137,10 +144,14 @@ class Wavespace(pl.LightningModule):
         SPECTRAL_LOSS = torch.sum(SPECTRAL_LOSS_BATCH)
         WAVEFORM_LOSS = torch.sum(WAVEFORM_LOSS_BATCH)        
         SEMANTIC_LOSS = torch.sum(SEMANTIC_LOSS_BATCH)
+        PHASE_LOSS = torch.sum(PHASE_LOSS_BATCH)
+        NOISE_LOSS = torch.sum(NOISE_LOSS_BATCH)
         WAVEFORM_LOSS_COEF_MULTIPLIED = WAVEFORM_LOSS_COEF * (1 + exp(-self.current_epoch * WAVEFORM_LOSS_DECREASE_RATE) * (WAVEFORM_LOSS_MULTIPLIER - 1))
         LOSS = (SPECTRAL_LOSS_COEF * SPECTRAL_LOSS_BATCH
                 + WAVEFORM_LOSS_COEF_MULTIPLIED * WAVEFORM_LOSS_BATCH
-                + SEMANTIC_LOSS_COEF * SEMANTIC_LOSS_BATCH
+                + PHASE_LOSS_COEF * PHASE_LOSS_BATCH
+                + NOISE_LOSS_COEF * NOISE_LOSS_BATCH
+                #+ SEMANTIC_LOSS_COEF * SEMANTIC_LOSS_BATCH
                 + KL_LOSS_COEF * KL_LOSS
                 + FEATURE_MATCHING_LOSS
                 + ADVERSARIAL_LOSS).sum()
@@ -153,6 +164,8 @@ class Wavespace(pl.LightningModule):
                        f'SPECTRAL_LOSS': SPECTRAL_LOSS,
                        f'WAVEFORM_LOSS': WAVEFORM_LOSS,
                        f'SEMANTIC_LOSS': SEMANTIC_LOSS,
+                       f'PHASE_LOSS': PHASE_LOSS,
+                       f'NOISE_LOSS': NOISE_LOSS,
                        f'RECONSTRUCTION_LOSS': SPECTRAL_LOSS + WAVEFORM_LOSS,
                        f'KL_LOSS': KL_LOSS,
                        f'FEATURE_MATCHING_LOSS': FEATURE_MATCHING_LOSS,
