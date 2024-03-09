@@ -53,8 +53,7 @@ class TrConv1d(nn.ConvTranspose1d):
         #if not TRAINING:
         #    print(f'TrConv {x.shape[1:]} -> {out.shape[1:]}') # console_check
         return out
-    
-# stride에 mod 2 (rave)
+
 class UpSampleBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride):
         super().__init__()
@@ -131,22 +130,6 @@ class Encoder(nn.Module):
                 ])
             self.net = nn.Sequential(*net)
             self.linear = nn.Sequential(nn.Linear(ENC_H[-1], LATENT_LEN*2), relu)
-        
-        if BLOCK_STYLE == 'DDSP':
-            self.mfcc = T.MFCC(
-                sample_rate=SR,
-                n_mfcc=13,
-                melkwargs={'n_fft': 400, 'hop_length': 2049, 'n_mels': 23}
-            )
-
-            # Convolutional layer
-            self.conv1d = nn.Conv1d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1)
-
-            # GRU layer
-            self.gru = nn.GRU(input_size=32, hidden_size=64, num_layers=1, batch_first=True)
-
-            # Fully connected (Dense) layer
-            self.fc = nn.Linear(64, W_DIM*2)
        
         self.register_buffer("warmed_up", torch.tensor(0))
  
@@ -161,21 +144,6 @@ class Encoder(nn.Module):
             w = self.linear(x)
             if self.warmed_up:
                 w = w.detach()
-            return w[:, :W_DIM], w[:, W_DIM:2*W_DIM]
-        if BLOCK_STYLE == 'DDSP':
-            # Input shape: (batch_size, 13, 1)
-            x = self.mfcc(x)
-            x = x.permute(0, 2, 1)  # Change to (batch_size, 1, 13) for Conv1D
-
-            # Convolutional layer
-            x = self.conv1d(x)
-
-            # GRU layer
-            _, x = self.gru(x.permute(0, 2, 1))  # Adjust dimensions for GRU
-
-            # Fully connected layer
-            w = self.fc(x[-1, :, :])  # Take the output from the last time step
-
             return w[:, :W_DIM], w[:, W_DIM:2*W_DIM]
 
 class Decoder(nn.Module):
@@ -200,22 +168,6 @@ class Decoder(nn.Module):
                 for j in range(RES_BLOCK_CONV_NUM):
                     net.extend([ResBlock(DEC_H[i+1])])
             self.net = nn.Sequential(*net)
-        
-        if BLOCK_STYLE == 'DDSP':
-            self.mfcc = T.MFCC(
-                sample_rate=SR,
-                n_mfcc=13,
-                melkwargs={'n_fft': 400, 'hop_length': 2049, 'n_mels': 23}
-            )
-
-            # Convolutional layer
-            self.conv1d = nn.Conv1d(in_channels=1, out_channels=32, kernel_size=3, stride=1, padding=1)
-
-            # GRU layer
-            self.gru = nn.GRU(input_size=32, hidden_size=64, num_layers=1, batch_first=True)
-
-            # Fully connected (Dense) layer
-            self.fc = nn.Linear(64, W_DIM*2)
 
     def forward(self, x):
         if BLOCK_STYLE == 'CONV1D':
@@ -234,22 +186,6 @@ class Decoder(nn.Module):
             x_hat = x_hat/amp_overall
             x_hat = x_hat*NORMALISED_ENERGY
             return x_hat
-
-        if BLOCK_STYLE == 'DDSP':
-            # Input shape: (batch_size, 13, 1)
-            x = self.mfcc(x)
-            x = x.permute(0, 2, 1)  # Change to (batch_size, 1, 13) for Conv1D
-
-            # Convolutional layer
-            x = self.conv1d(x)
-
-            # GRU layer
-            _, x = self.gru(x.permute(0, 2, 1))  # Adjust dimensions for GRU
-
-            # Fully connected layer
-            w = self.fc(x[-1, :, :])  # Take the output from the last time step
-
-            return w
 
     #OBSOLÈTE
     def sum_sine_waves(self, amps, phases, frequencies, time_period=1, num_samples=1024):

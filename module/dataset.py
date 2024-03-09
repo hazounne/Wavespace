@@ -98,18 +98,20 @@ class DatasetBuilder(Dataset):
 
     if DATASET_TYPE == 'WAVETABLE':
       # normalise
-      x = x[::2] #2048 -> 1024
+      if (WAVEFORMS == serum_sub2_B) or (WAVEFORMS == serum_sub_B): x = x[::2] #2048 -> 1024
       amp = (torch.sum(x.pow(2), dim=-1).sqrt().unsqueeze(-1))
       x /= amp
       x *= NORMALISED_ENERGY
       y, pos = filename_parse(filename).values() # should be correspond to
-      return x, y, amp, pos
+      return x, y, amp
 
     elif DATASET_TYPE == 'PLAY':
-      y, method, pitch, velocity = filename_parse(filename).values()
+      y, pitch, amp = filename_parse(filename).values()
       ind = min(48000-RAW_LEN-1,torch.argmax(x).item())
+      random_int = random.randint(0, RAW_LEN-1)
       wave = x[ind:ind+RAW_LEN]
-      return wave.float(), y, pitch, velocity
+      # wave = x[max(ind+random_int,0):min(ind+RAW_LEN,64000)]
+      return wave.float(), y
 
 def data_build(datasets, folds, BS, loaderonly=True, num_workers=NUM_WORKERS) -> tuple:
   '''

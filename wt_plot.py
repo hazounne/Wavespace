@@ -6,20 +6,7 @@ import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     ###CHECKPOINT LOAD###
-    load_ckpt = torch.load(CKPT_TEST)
-    loaded_model_state_dict = load_ckpt['state_dict']
-    if STAGE == 1:
-        new_state_dict = wavespace.state_dict()
-        for key in new_state_dict.keys():
-            if not 'discriminator' in key:
-                new_state_dict[key] = loaded_model_state_dict[key]
-        wavespace.load_state_dict(new_state_dict)
-    elif STAGE == 2: wavespace.load_state_dict(loaded_model_state_dict)
-
-    print(f"checkpoint_loaded:{CKPT_TEST}")
-    if STAGE == 2:
-        for param in wavespace.encoder.parameters():
-            param.requires_grad = False
+    wavespace = Wavespace().load_from_checkpoint(CKPT_TEST).to(DEVICE)
     wavespace.eval()
     db = DatasetBuilder(file_list=DATASETS[0])
 
@@ -47,10 +34,10 @@ if __name__ == '__main__':
                     datum[j] = torch.Tensor([datum[j]]).to(torch.int64).to(DEVICE)
                 else: datum[j] = datum[j].reshape(1,-1).to(DEVICE)
 
-            x, y, amp, pos, features = tuple(datum)
+            x, y, amp, pos = tuple(datum)
             mu_w, logvar_w = wavespace.encoder(x) #x, x_hat, mu_w, logvar_w, y
             w = mu_w
-
+            features = get_semantic_conditions(x)
             fig, axes = plt.subplots(len(z1_range), len(z2_range), figsize=(80, 48))
             for n, z2 in enumerate(z2_range):
                 for m, z1 in enumerate(z1_range):
@@ -59,12 +46,6 @@ if __name__ == '__main__':
                     w[0,2*C] = z1
                     #w[0,2*C+1] = z2
                     features[0,1] = z2/3
-                    #pos = torch.tensor([[z2]]).float().to(DEVICE)
-                    #print(f'W: {w}')
-                    #print(f'pos: {pos}')
-                    #f0 = f0.to(DEVICE)
-                    #amp = amp.to(DEVICE)
-                    #amp = torch.tensor([z2]).float().unsqueeze(0).to(DEVICE)
                     w_s = torch.concatenate((w,features), dim=-1)
                     x_hat = wavespace.decoder(w_s).to('cpu')
                     out = x_hat #* amp.to('cpu')

@@ -59,18 +59,18 @@ class Wavespace(pl.LightningModule):
     def forward(self, batches, gen=False):
         #Encode
         if DATASET_TYPE == 'WAVETABLE':
-            x, y, pos, amp = batches
-            #pos = pos.reshape(-1,1)
+            x, y, amp = batches
         elif DATASET_TYPE == 'PLAY':
+            x, y = batches
             x, f0, amp = play_preprocess(x, f_s=16000, n=X_DIM, f_0='crepe')
+            x = x/amp
         mu_w, logvar_w = self.encoder(x)
         w = self.sampling(mu_w, logvar_w)
+
         #Decode
-        if DATASET_TYPE == 'WAVETABLE':
-            sc = get_semantic_conditions(x)
-            w_sc = torch.cat((w, sc), dim=-1)
-            x_hat = self.decoder(w_sc)
-        elif DATASET_TYPE == 'PLAY': x_hat = self.decoder(w, amp, f0)
+        sc = get_semantic_conditions(x)
+        w_sc = torch.cat((w, sc), dim=-1)
+        x_hat = self.decoder(w_sc)
         if wandb.run != None:
             wandb.log({
             'W': w,
@@ -123,11 +123,12 @@ class Wavespace(pl.LightningModule):
         SEMANTIC_LOSS_BATCH = (get_semantic_conditions(x) - get_semantic_conditions(x_hat)).abs()
 
         # Compute the column-wise minimum operation
-        PHASE_LOSS_BATCH = torch.minimum(2 * torch.pi - SEMANTIC_LOSS_BATCH[:, 4], SEMANTIC_LOSS_BATCH[:, 4]) / BS
+        #PHASE_LOSS_BATCH = torch.minimum(2 * torch.pi - SEMANTIC_LOSS_BATCH[:, 4], SEMANTIC_LOSS_BATCH[:, 4]) / BS
+        PHASE_LOSS_BATCH = SEMANTIC_LOSS_BATCH[:, 4] / BS
         NOISE_LOSS_BATCH = SEMANTIC_LOSS_BATCH[:, 3] / BS
 
         # Calculate the sum along the last dimension
-        SEMANTIC_LOSS_BATCH = torch.sum(SEMANTIC_LOSS_BATCH[:,:3], dim=-1) / BS
+        SEMANTIC_LOSS_BATCH = torch.sum(SEMANTIC_LOSS_BATCH[:, :3], dim=-1) / BS
         if STAGE == 1:
             KL_LOSS = torch.sum(self.KL(
                         mu_w,
@@ -147,15 +148,15 @@ class Wavespace(pl.LightningModule):
         PHASE_LOSS = torch.sum(PHASE_LOSS_BATCH)
         NOISE_LOSS = torch.sum(NOISE_LOSS_BATCH)
         WAVEFORM_LOSS_COEF_MULTIPLIED = WAVEFORM_LOSS_COEF * (1 + exp(-self.current_epoch * WAVEFORM_LOSS_DECREASE_RATE) * (WAVEFORM_LOSS_MULTIPLIER - 1))
+        #SPECTRAL_LOSS_COEF_COMPENSATION = WAVEFORM_LOSS_MULTIPLIER*WAVEFORM_LOSS_COEF - WAVEFORM_LOSS_COEF_MULTIPLIED
         LOSS = (SPECTRAL_LOSS_COEF * SPECTRAL_LOSS_BATCH
                 + WAVEFORM_LOSS_COEF_MULTIPLIED * WAVEFORM_LOSS_BATCH
                 + PHASE_LOSS_COEF * PHASE_LOSS_BATCH
                 + NOISE_LOSS_COEF * NOISE_LOSS_BATCH
-                #+ SEMANTIC_LOSS_COEF * SEMANTIC_LOSS_BATCH
+                + SEMANTIC_LOSS_COEF * SEMANTIC_LOSS_BATCH
                 + KL_LOSS_COEF * KL_LOSS
                 + FEATURE_MATCHING_LOSS
                 + ADVERSARIAL_LOSS).sum()
-
         KL = torch.sum(KL_LOSS)
         if wandb.run != None:
             wandb.log({f'SPECTRAL_LOSS_BATCH': SPECTRAL_LOSS_BATCH,
@@ -170,7 +171,7 @@ class Wavespace(pl.LightningModule):
                        f'KL_LOSS': KL_LOSS,
                        f'FEATURE_MATCHING_LOSS': FEATURE_MATCHING_LOSS,
                        f'ADVERSARIAL_LOSS': ADVERSARIAL_LOSS,
-                       f'{process}_LOSS': LOSS,
+                       f'{process}_LOSS': SPECTRAL_LOSS + WAVEFORM_LOSS + SEMANTIC_LOSS + PHASE_LOSS + NOISE_LOSS,
                        f'WAVEFORM_LOSS_COEF_MULTIPLIED': WAVEFORM_LOSS_COEF_MULTIPLIED,
                        })
         assert not (torch.isnan(LOSS).any())

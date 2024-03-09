@@ -69,31 +69,13 @@ class CREPE(nn.Module):
         return x
     
     def get_activation(self, audio, sr, center=True, step_size=10, batch_size=128):
-        """     
-        audio : (N,) or (C, N)
-        """
 
         if sr != 16000:
-            rs = torchaudio.transforms.Resample(sr, 16000)
+            rs = torchaudio.transforms.Resample(sr, 16000).to(DEVICE)
             audio = rs(audio)
-        
-        if len(audio.shape) == 2:
-            if audio.shape[0] == 1:
-                audio = audio[0]
-            else:
-                audio = audio.mean(dim=0) # make mono
 
         def get_frame(audio):
-            # if center:
-            #     audio = nn.functional.pad(audio, pad=(512, 512))
-            # # make 1024-sample frames of the audio with hop length of 10 milliseconds
-            # hop_length = 1024 #int(16000 * step_size / 1000)
-            # n_frames = int((len(audio) - 1024) / hop_length) # + 1
-            # assert audio.dtype == torch.float32
-            # itemsize = 1 # float32 byte size
-            # frames = torch.as_strided(audio, size=(1024, n_frames), stride=(itemsize, hop_length * itemsize))
-            # frames = frames.transpose(0, 1).clone()
-            frames = audio.reshape(-1, 1024).to(torch.float32)
+            frames = audio.to(torch.float32)
             frames -= (torch.mean(frames, axis=1).unsqueeze(-1))
             frames /= (torch.std(frames, axis=1).unsqueeze(-1))
             return frames
@@ -110,9 +92,10 @@ class CREPE(nn.Module):
     def predict(self, audio, sr, viterbi=False, center=True, step_size=10, batch_size=128):
         activation = self.get_activation(audio, sr, batch_size=batch_size, step_size=step_size)
         frequency = to_freq(activation, viterbi=viterbi)
-        confidence = activation.max(dim=1)[0]
-        time = torch.arange(confidence.shape[0]) * step_size / 1000.0
-        return time, frequency, confidence, activation
+        #confidence = activation.max(dim=1)[0]
+        #time = torch.arange(confidence.shape[0]) * step_size / 1000.0
+        return frequency
+        #return time, frequency, confidence, activation
 
     def process_file(self, file, output=None, viterbi=False, 
                      center=True, step_size=10, save_plot=False, batch_size=128):
