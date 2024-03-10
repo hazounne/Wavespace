@@ -77,7 +77,7 @@ def get_semantic_conditions(x: torch.Tensor):
     brightness = log(centroid * (torch.exp(k) - 1) + 1) / k
 
     spread = torch.sqrt(torch.sum(spec_pow * (torch.linspace(0, 1, Nh).to(DEVICE).unsqueeze(0).tile((bs,1)) - centroid).pow(2), -1, keepdim=True) / total)
-    k = torch.tensor([7.5]).to(DEVICE)
+    k = torch.tensor([5.5]).to(DEVICE)
     richness = log(spread * (torch.exp(k) - 1) + 1) / k
 
     difference = torch.sum((torch.diff(x)).abs(), -1, keepdim=True) / (waveform_length-1)

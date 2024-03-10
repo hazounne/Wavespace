@@ -18,7 +18,7 @@ WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 #check: numworkers, wandb.
 TRAINING = True
 CKPT_LOAD = False
-if CKPT_LOAD: STARTING_EPOCH = 5000
+if CKPT_LOAD: STARTING_EPOCH = 1500
 EXP_NAME = 'WSS_B'
 NUM_WORKERS = 24
 
@@ -31,9 +31,9 @@ elif TRAINING:
     wandb.login(key=WANDB_ID)
 else:
     WANDB = 0
-EPOCH = 1500
+EPOCH = 5000
 STAGE = 1
-CKPT_NAME = 'WSS_phase_noise_only_1_1' #f'{EXP_NAME}_{1}'
+CKPT_NAME = f'{EXP_NAME}_{1}' #'WSS_phase_noise_only_1_1'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
