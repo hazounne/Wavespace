@@ -16,12 +16,16 @@ PARENT_PATH = Path(_USER_DATA[_USER_CURRENT]['PATH_BASE']) #/content
 WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 
 #check: numworkers, wandb.
-TRAINING = True
+TRAINING = ''
 CKPT_LOAD = False
 if CKPT_LOAD: STARTING_EPOCH = 1500
-EXP_NAME = 'WSS_B'
+EXP_NAME = 'WSS_STANDARD'
 NUM_WORKERS = 24
-
+#Major Model Settings
+TINY = True
+LEARN_PRIORS = True
+PRIORS_RANDOM_INITIALISE = False
+PRIOR_COEF = 10
 
 #SETTINGS
 if TRAINING == 'SWEEP':
@@ -32,8 +36,8 @@ elif TRAINING:
 else:
     WANDB = 0
 EPOCH = 5000
-STAGE = 1
-CKPT_NAME = f'{EXP_NAME}_{1}' #'WSS_phase_noise_only_1_1'
+TEST_NAME = '4'
+CKPT_NAME = f'{EXP_NAME}_{TEST_NAME}' #
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
@@ -63,59 +67,59 @@ serum_sub_A = [
 ]
 
 serum_sub_B = [
-    ('4088', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('BottleBlow', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Acid', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Debussy', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
+    ('4088', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('BottleBlow', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Acid', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Debussy', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
 serum_sub2_B = [
-    ('4088', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('BottleBlow', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Acid', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Debussy', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('AlienSpectral [SN]', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Dist Fwapper SQ', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('FFT_SQUEAL', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Evolution', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Evol Sweep', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Evol Longreece', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Dull_toy', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Dist WaTech', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Dist d00t', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Dist C2', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Dist Bass Dropper', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('Dist 8bit Fwap', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('DirtySaw', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('CrushWub', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
+    ('4088', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('BottleBlow', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Acid', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Debussy', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('AlienSpectral [SN]', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Dist Fwapper SQ', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('FFT_SQUEAL', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Evolution', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Evol Sweep', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Evol Longreece', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Dull_toy', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Dist WaTech', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Dist d00t', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Dist C2', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Dist Bass Dropper', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('Dist 8bit Fwap', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('DirtySaw', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('CrushWub', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
 nsynth_all_B = [
-    ('bass', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('brass', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('flute', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('guitar', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('keyboard', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('mallet', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('organ', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('reed', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('string', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('lead', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('vocal', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
+    ('bass', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('brass', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('flute', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('guitar', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('keyboard', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('mallet', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('organ', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('reed', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('string', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('lead', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('vocal', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
     # Add more instruments in the same tuple structure
 ]
 
 nsynth_sub_B = [
-    ('bass', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('organ', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('string', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
+    ('bass', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('organ', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('string', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
 internal_ = [
-    ('PNO', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('STR', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('WND', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
-    ('GTR', [0]*SUB_DIM, [0]*SUB_DIM, [5]*SUB_DIM, [0]*SUB_DIM,),
+    ('PNO', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('STR', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('WND', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('GTR', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
 if DATASET_TYPE == 'WAVETABLE': WAVEFORMS = serum_sub2_B #internal_
@@ -136,8 +140,8 @@ def switcher(conds, false, true):
         out.append(sub_out)
     return out
 
-MU_W = switcher(WAVEFORMS, 1, 3)
-LOGVAR_W = switcher(WAVEFORMS, 2, 4)
+MU_Z = switcher(WAVEFORMS, 1, 3)
+LOGVAR_Z = switcher(WAVEFORMS, 2, 4)
 
 nsynth_method_dictionary = {'bass': 0,
                             'synthetic': 1,
@@ -201,12 +205,20 @@ else:
 if not LOSS_SCHEDULE: LR = LR//10
 
 W_VAR = np.log(0.7) #small value
-ENC_H = [1, 16, 32, 64, 128, 256, 512]
-ENC_K = [5, 5, 8, 8, 4, 2]
-ENC_S = [4, 4, 4, 4, 2, 2]
-DEC_H = [512, 256, 128, 64, 32, 16, 8]
-DEC_K = [4, 8, 8, 5, 5, 2]
-DEC_S = [2, 3, 3, 3, 3, 2]
+if TINY:
+    ENC_H = [1, 4, 8, 16, 32, 64, 128]
+    ENC_K = [3, 3, 5, 5, 2, 2]
+    ENC_S = [4, 4, 4, 4, 2, 2]
+    DEC_H = [128, 64, 32, 16, 8, 4, 2]
+    DEC_K = [4, 8, 8, 5, 5, 2]
+    DEC_S = [2, 3, 3, 3, 3, 2]
+else:
+    ENC_H = [1, 16, 32, 64, 128, 256, 512]
+    ENC_K = [5, 5, 8, 8, 4, 2]
+    ENC_S = [4, 4, 4, 4, 2, 2]
+    DEC_H = [512, 256, 128, 64, 32, 16, 8]
+    DEC_K = [4, 8, 8, 5, 5, 2]
+    DEC_S = [2, 3, 3, 3, 3, 2]
 LATENT_LEN = N_CONDS*SUB_DIM #固定
 SEMANTIC_CONDITION_LEN = 5
 RES_BLOCK_CONV_NUM = 3

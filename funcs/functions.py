@@ -23,8 +23,11 @@ def plot_save(x,name: str, acc=False) -> None:
 def log(x):
   return torch.log(torch.max(x+EPSILON,torch.ones_like(x)*EPSILON))
 
-def idft(x:torch.tensor) -> torch.tensor:
-    return fft.irfft(torch.tensor(1j, dtype=torch.complex64)*x)
+def dft(x:torch.tensor) -> torch.tensor:
+    return fft.rfft(x)
+def idft(x:torch.tensor, cos=True) -> torch.tensor:
+    if cos: return fft.irfft(torch.tensor(1j, dtype=torch.complex64)*x)
+    else: return fft.irfft(x)
 def get_padding(k, s=1, d=1, mode="centered") -> tuple:
     """
     Computes 'same' padding given a kernel size, stride an dilation.
@@ -82,21 +85,21 @@ def get_semantic_conditions(x: torch.Tensor):
 
     difference = torch.sum((torch.diff(x)).abs(), -1, keepdim=True) / (waveform_length-1)
     k = torch.tensor([5.5]).to(DEVICE)
-    noisiness = log(difference * (torch.exp(k) - 1) + 1) / k
-    noisiness = noisiness
+    undulation = log(difference * (torch.exp(k) - 1) + 1) / k
+    undulation = undulation
 
     hnumber = int(waveform_length / 2) - 1
     odd_power = torch.sum(spec_pow[:, 1::2], -1, keepdim=True)
     fullness = 1 - odd_power / total
 
-    # symmetry = torch.angle(spec.sum(-1, keepdim=True))
-    symmetry = torch.sum((x[:,:512] + torch.flip(x[:, 512:], dims=[1])).abs(), -1, keepdim=True)
+    symmetry = torch.angle(spec.sum(-1, keepdim=True))
+    #symmetry = torch.sum((x[:,:512] + torch.flip(x[:, 512:], dims=[1])).abs(), -1, keepdim=True)
     brightness[total == 0] = -1
     richness[total == 0] = -1
-    noisiness[total == 0] = -1
+    undulation[total == 0] = -1
     fullness[total == 0] = -1
         
-    return torch.concat((brightness, richness, fullness, noisiness, symmetry), dim=-1)
+    return torch.concat((brightness, richness, fullness, undulation, symmetry), dim=-1)
 
 def play_preprocess(x: np.ndarray,
                           f_s: int,

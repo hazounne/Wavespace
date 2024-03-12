@@ -6,18 +6,17 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 from collections import deque as dq
 if __name__ == '__main__':
-    ##LOAD
-    load_ckpt = torch.load(CKPT_TEST)
-    loaded_model_state_dict = load_ckpt['state_dict']
-    # loaded_optimizer_state_dict = load_ckpt['optimizer_state_dict']
-
-    wavespace = Wavespace()
-    wavespace.load_state_dict(loaded_model_state_dict)
-    wavespace = wavespace.to(DEVICE) #after train/test, the model automatically set to CPU
+    wavespace = Wavespace().load_from_checkpoint(CKPT_TEST).to(DEVICE)
     wavespace.eval()
-    #optimizer = optim.Adam(wavespace.parameters(), lr=0.001)
-    #optimizer.load_state_dict(loaded_optimizer_state_dict)
-    db = DatasetBuilder(file_list=DATASETS[0])
+    wavespace.eval()
+    train_databuilders, test_databuilders, _,_,_,_ = data_build(
+    DATASETS,
+    [9], #1:train 0:test -1:valid, X:pass, else:n-fold
+    BS=BS,
+    loaderonly=False
+    )
+
+    db = test_databuilders[0]
 
     X = dq([])
     H = dq([])
@@ -71,7 +70,7 @@ if __name__ == '__main__':
                     s=0.5)
 
     # Add labels and a title
-    plt.legend(loc='upper right', title='conditions', fontsize='small')
+    plt.legend(loc='upper right', title='conditions', fontsize='small', bbox_to_anchor=(1.5, 1))
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('W')
@@ -89,7 +88,7 @@ if __name__ == '__main__':
                     )
 
     # Add labels and a title
-    plt.legend(loc='upper right', title='conditions', fontsize='small')
+    plt.legend(loc='upper right', title='conditions', fontsize='small', bbox_to_anchor=(1.5, 1))
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('X')
@@ -108,7 +107,7 @@ if __name__ == '__main__':
                     )
 
     # Add labels and a title
-    plt.legend(loc='upper right', title='conditions', fontsize='small')
+    plt.legend(loc='upper right', title='conditions', fontsize='small', bbox_to_anchor=(1.5, 1))
     plt.xlabel('X-axis')
     plt.ylabel('Y-axis')
     plt.title('X_hat')

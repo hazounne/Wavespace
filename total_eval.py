@@ -3,6 +3,7 @@ from funcs import *
 from config import *
 import torch.nn.functional as F
 from module.dataset import DatasetBuilder
+from torch.fft import rfft as fft
 import time
 
 if __name__ == '__main__':
@@ -18,9 +19,8 @@ if __name__ == '__main__':
     db = test_databuilders[0]
     num_of_data = len(db)
     wMAE = 0
-    wMSE = 0
-    sMAE = 0
     sMSE = 0
+    cMAE = torch.zeros(1,5).to(DEVICE)
     TIME = 0
     def minmax_normal(data, range=(-1,1)):
         min_val = torch.min(data)
@@ -31,26 +31,26 @@ if __name__ == '__main__':
     with torch.no_grad():
         i_tensor = torch.tensor(1j, dtype=torch.complex64).to(DEVICE)
         for i in range(num_of_data):
-            x = db[i]
-            x = x[0].unsqueeze(0).to(DEVICE)
+            x = db[i][0].unsqueeze(0).to(DEVICE)
             start = time.time() # 시작
-            mu_w, logvar_w = wavespace.encoder(x) #x, x_hat, mu_w, logvar_w, y
+            mu_w, logvar_w, x, x_spec = wavespace.encoder(x) #x, x_hat, mu_w, logvar_w, y
             w = mu_w
-            w = torch.concatenate((w,get_semantic_conditions(x)), dim=-1)
-            x_hat = wavespace.decoder(w)
-            end = time.time() # 시작
-            x = minmax_normal(x.squeeze(0))
-            x_hat = minmax_normal(x_hat.squeeze(0))
+            w = torch.concatenate((w, get_semantic_conditions(x)), dim=-1)
+            w = torch.zeros_like(w).to(DEVICE)
+            x_hat, x_hat_spec = wavespace.decoder(w)
+            end = time.time() # 종료
+
+            cMAE += (get_semantic_conditions(x) - get_semantic_conditions(x_hat)).abs()
+            x = x.squeeze(0)
+            x_hat = x_hat.squeeze(0)
+            x_hat_spec = x_hat_spec.squeeze(0)
             TIME += end-start
             wMAE += torch.mean((x - x_hat).abs()).item()
-            wMSE += torch.mean((x - x_hat).pow(2)).item()
-            x_s = fft.rfft(x).abs()
-            x_hat_s = fft.rfft(x_hat).abs()
-            sMAE += torch.mean((x_s - x_hat_s).abs()).item()
-            sMSE += torch.mean((x_s - x_hat_s).pow(2)).item()
+            sMSE += torch.mean((x_spec - x_hat_spec).pow(2)).item()
         
         print(f'wMAE = {wMAE/(num_of_data)}')
-        print(f'wMSE = {wMSE/(num_of_data)}')
-        print(f'sMAE = {sMAE/(num_of_data)}')
         print(f'sMSE = {sMSE/(num_of_data)}')
+        print(f'cMAE = {cMAE/(num_of_data)}')
         print(f'avgTIME = {TIME/(num_of_data)}')
+        torch.save(wavespace.state_dict(), f'/workspace/wss/ckpt/pt/{CKPT_NAME}.pt')
+        

@@ -99,11 +99,8 @@ class DatasetBuilder(Dataset):
     if DATASET_TYPE == 'WAVETABLE':
       # normalise
       if (WAVEFORMS == serum_sub2_B) or (WAVEFORMS == serum_sub_B): x = x[::2] #2048 -> 1024
-      amp = (torch.sum(x.pow(2), dim=-1).sqrt().unsqueeze(-1))
-      x /= amp
-      x *= NORMALISED_ENERGY
       y, pos = filename_parse(filename).values() # should be correspond to
-      return x, y, amp
+      return x, y
 
     elif DATASET_TYPE == 'PLAY':
       y, pitch, amp = filename_parse(filename).values()

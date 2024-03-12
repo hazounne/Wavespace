@@ -139,12 +139,23 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         if BLOCK_STYLE == 'CONV1D':
-            x = self.net(x.unsqueeze(1))
-            x = torch.squeeze(x, dim=2)
-            w = self.linear(x)
+            #preprocessing: dc offset to 0, normalise energy.
+            mimi = x.clone()
+            x_mag = torch.cat((torch.zeros(x.shape[0],1).to(DEVICE),dft(x)[:,1:]), dim=-1)
+            preprocessed_x = idft(x_mag, cos=False)
+            x_spec = x_mag.abs()
+            amp = torch.sum(preprocessed_x.pow(2), dim=-1).sqrt().unsqueeze(-1)
+            preprocessed_x = preprocessed_x / amp
+            x_spec = x_spec / amp
+
+            #encoder
+            preprocessed_x *= NORMALISED_ENERGY
+            conv1d_passed_preprocessed_x = self.net(preprocessed_x.unsqueeze(1))
+            conv1d_passed_preprocessed_x = torch.squeeze(conv1d_passed_preprocessed_x, dim=2)
+            w = self.linear(conv1d_passed_preprocessed_x)
             if self.warmed_up:
                 w = w.detach()
-            return w[:, :W_DIM], w[:, W_DIM:2*W_DIM]
+            return w[:, :W_DIM], w[:, W_DIM:2*W_DIM], preprocessed_x, x_spec
 
 class Decoder(nn.Module):
     def __init__(
@@ -179,28 +190,15 @@ class Decoder(nn.Module):
             elif DECODER_STYLE == 'SPECTRAL_SEPARATED':
                 amp = self.amp_dense(x).squeeze(1)
                 phase = self.phase_dense(x).squeeze(1)
-
-            complex_expression = torch.concat((torch.zeros(x.shape[0],1).to(DEVICE), amp*torch.exp(1j * phase)), dim=-1)
-            x_hat = idft(complex_expression)
+            
+            magnitude = torch.concat((torch.zeros(x.shape[0],1).to(DEVICE), amp*torch.exp(1j * phase)), dim=-1)
+            x_hat = idft(magnitude)
             amp_overall = torch.sum(x_hat.pow(2), dim=-1).sqrt().unsqueeze(-1)
             x_hat = x_hat/amp_overall
             x_hat = x_hat*NORMALISED_ENERGY
-            return x_hat
-
-    #OBSOLÈTE
-    def sum_sine_waves(self, amps, phases, frequencies, time_period=1, num_samples=1024):
-        batch_size, _ = amps.size()
-        time = torch.linspace(0, time_period, num_samples).repeat((batch_size, 1))
-        sum_wave = torch.zeros((batch_size, num_samples))
-
-        amps = torch.permute(amps, [1, 0]) # for문에서 배치 별로 봐야함
-        phases = torch.permute(phases, [1, 0])
-        for amp, phase, freq in zip(amps, phases, frequencies):
-            phase = torch.permute(phase.repeat((1024, 1)), [1, 0]) # phase한꺼번에 계산하려하니...
-            amp = torch.permute(amp.repeat((1024, 1)), [1, 0])
-
-            sum_wave += amp * torch.sin(2 * torch.pi * freq * (time + phase))
-        return sum_wave
+            amplitude = magnitude.abs()/amp_overall
+            magnitude = magnitude/amp_overall
+            return x_hat, amplitude
 
 class CONV1D(nn.Module):
     def __init__(
