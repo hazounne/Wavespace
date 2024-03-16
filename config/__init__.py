@@ -19,13 +19,8 @@ WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
 TRAINING = ''
 CKPT_LOAD = False
 if CKPT_LOAD: STARTING_EPOCH = 1500
-EXP_NAME = 'WSS_STANDARD'
 NUM_WORKERS = 24
 #Major Model Settings
-TINY = True
-LEARN_PRIORS = True
-PRIORS_RANDOM_INITIALISE = False
-PRIOR_COEF = 10
 
 #SETTINGS
 if TRAINING == 'SWEEP':
@@ -36,8 +31,15 @@ elif TRAINING:
 else:
     WANDB = 0
 EPOCH = 5000
-TEST_NAME = '4'
-CKPT_NAME = f'{EXP_NAME}_{TEST_NAME}' #
+#(16,0,1), (15,1,1), (13,0,0), (14,1,0)
+TEST_NAME = '14'
+TINY = 1
+LEARN_PRIORS = 0
+if LEARN_PRIORS:
+    PRIORS_RANDOM_INITIALISE = True
+    PRIOR_COEF = 17
+EXP_NAME = 'WSS_STANDARD'
+CKPT_NAME = f'{EXP_NAME}_{TEST_NAME}'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
@@ -51,9 +53,6 @@ basic_shapes = [
     ('tri', (0, 3)),
     ('pul', (3, 0)),
     ('saw', (3, 3)),
-    #('pwa', (-1, 0)),
-    #('pwb', (-1, 1)),
-    #('sap', (0, 8)),
 ]
 
 serum_sub_A = [
@@ -61,16 +60,6 @@ serum_sub_A = [
     ('BottleBlow', (0, 3)),
     ('Acid', (3, 0)),
     ('Debussy', (3, 3)),
-    #('pwa', (-1, 0)),
-    #('pwb', (-1, 1)),
-    #('sap', (0, 8)),
-]
-
-serum_sub_B = [
-    ('4088', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('BottleBlow', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('Acid', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('Debussy', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
 serum_sub2_B = [
@@ -94,27 +83,6 @@ serum_sub2_B = [
     ('CrushWub', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
-nsynth_all_B = [
-    ('bass', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('brass', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('flute', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('guitar', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('keyboard', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('mallet', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('organ', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('reed', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('string', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('lead', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('vocal', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    # Add more instruments in the same tuple structure
-]
-
-nsynth_sub_B = [
-    ('bass', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('organ', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('string', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-]
-
 internal_ = [
     ('PNO', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
     ('STR', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
@@ -122,7 +90,12 @@ internal_ = [
     ('GTR', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
-if DATASET_TYPE == 'WAVETABLE': WAVEFORMS = serum_sub2_B #internal_
+waveedit = [
+    ('softwaves', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('rect', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+]
+
+if DATASET_TYPE == 'WAVETABLE': WAVEFORMS = waveedit #internal_
 elif DATASET_TYPE == 'PLAY': WAVEFORMS = nsynth_all_B #Conditions we use
 N_CONDS = len(WAVEFORMS)
 
@@ -178,7 +151,7 @@ NORMALISED_ENERGY = 1
 BETA = 1/256
 LAMBDA_FEATURE_MATCHING = 20 #feature matching loss 람다
 LAMBDA_ADVERSARIAL = 1 # GAN generator adversarial loss 람다
-
+serum_sub_B = 0
 #YAML
 if WANDB == "SWEEP":
     SPECTRAL_LOSS_COEF = config.SPECTRAL_LOSS_COEF

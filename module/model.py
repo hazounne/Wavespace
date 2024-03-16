@@ -32,8 +32,8 @@ class Wavespace(pl.LightningModule):
             initial_mu_z = torch.tensor(MU_Z).to(DEVICE)
             initial_logvar_z = torch.tensor(LOGVAR_Z).to(DEVICE)
             if PRIORS_RANDOM_INITIALISE: #if priors are randomly initialised by randn
-                self.mu_z = nn.Parameter(torch.randn_alike(initial_mu_z).to(DEVICE).clone().detach())
-                self.logvar_z = nn.Parameter(torch.randn_alike(initial_logvar_z).to(DEVICE).clone().detach())
+                self.mu_z = nn.Parameter(torch.randn_like(initial_mu_z).to(DEVICE).clone().detach())
+                self.logvar_z = nn.Parameter(torch.randn_like(initial_logvar_z).to(DEVICE).clone().detach())
             else:
                 self.mu_z = nn.Parameter(initial_mu_z.clone().detach())
                 self.logvar_z = nn.Parameter(initial_logvar_z.clone().detach())
