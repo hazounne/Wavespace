@@ -6,17 +6,12 @@ import random
 import os
 from pathlib import Path
 
-_USER_DATA = {'GHK': {'WANDB_ID': '6ec2335e1f6ce27570b1c7a53c2ad085a62f28fc',
-                     'PATH_BASE': '/Users/johnkim/Desktop/2023_2_MARG/wss_code'},
-              'HZL': {'WANDB_ID': '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b',
-                     'PATH_BASE': '/workspace'},
-                    }
 _USER_CURRENT = 'HZL' #set as you before any operation
-PARENT_PATH = Path(_USER_DATA[_USER_CURRENT]['PATH_BASE']) #/content
-WANDB_ID = _USER_DATA[_USER_CURRENT]['WANDB_ID']
-
+PARENT_PATH = Path('/workspace') #/content
+WANDB_ID = '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b'
+torch.autograd.set_detect_anomaly(True)
 #check: numworkers, wandb.
-TRAINING = ''
+TRAINING = 'TRAIN'
 CKPT_LOAD = False
 if CKPT_LOAD: STARTING_EPOCH = 1500
 NUM_WORKERS = 24
@@ -25,21 +20,23 @@ NUM_WORKERS = 24
 #SETTINGS
 if TRAINING == 'SWEEP':
     WANDB = 'SWEEP'
+    wandb.run.name = f'{TINY}{LEARN_PRIORS}{SET}'
 elif TRAINING:
     WANDB = 'TRAIN'
     wandb.login(key=WANDB_ID)
 else:
     WANDB = 0
+
+AB_D, AB_L, AB_S = 1, 0, 0
+
 EPOCH = 5000
-#(16,0,1), (15,1,1), (13,0,0), (14,1,0)
-TEST_NAME = '14'
-TINY = 1
+TEST_NAME = '1'
+TINY = 0
 LEARN_PRIORS = 0
 if LEARN_PRIORS:
-    PRIORS_RANDOM_INITIALISE = True
     PRIOR_COEF = 17
-EXP_NAME = 'WSS_STANDARD'
-CKPT_NAME = f'{EXP_NAME}_{TEST_NAME}'
+EXP_NAME = f'WSS_ISMIR_AB_{AB_D}{AB_L}{AB_S}'
+CKPT_NAME = 'WSS_ISMIR_SE_S0_PL0_SET0'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
@@ -62,6 +59,7 @@ serum_sub_A = [
     ('Debussy', (3, 3)),
 ]
 
+serum_sub_B = []
 serum_sub2_B = [
     ('4088', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
     ('BottleBlow', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
@@ -95,7 +93,8 @@ waveedit = [
     ('rect', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
-if DATASET_TYPE == 'WAVETABLE': WAVEFORMS = waveedit #internal_
+###########
+if DATASET_TYPE == 'WAVETABLE': WAVEFORMS = serum_sub2_B #internal_
 elif DATASET_TYPE == 'PLAY': WAVEFORMS = nsynth_all_B #Conditions we use
 N_CONDS = len(WAVEFORMS)
 
@@ -149,8 +148,6 @@ EPSILON = 1e-8
 LOGVAR = 0
 NORMALISED_ENERGY = 1
 BETA = 1/256
-LAMBDA_FEATURE_MATCHING = 20 #feature matching loss 람다
-LAMBDA_ADVERSARIAL = 1 # GAN generator adversarial loss 람다
 serum_sub_B = 0
 #YAML
 if WANDB == "SWEEP":
@@ -175,6 +172,12 @@ else:
     SEED = config['SEED']
     WAVEFORM_LOSS_MULTIPLIER = config['WAVEFORM_LOSS_MULTIPLIER']
     WAVEFORM_LOSS_DECREASE_RATE = config['WAVEFORM_LOSS_DECREASE_RATE']
+
+if AB_L == 0:
+    PHASE_LOSS_COEF = 0
+    NOISE_LOSS_COEF = 0
+    SEMANTIC_LOSS_COEF = 0
+
 if not LOSS_SCHEDULE: LR = LR//10
 
 W_VAR = np.log(0.7) #small value
@@ -193,48 +196,9 @@ else:
     DEC_K = [4, 8, 8, 5, 5, 2]
     DEC_S = [2, 3, 3, 3, 3, 2]
 LATENT_LEN = N_CONDS*SUB_DIM #固定
-SEMANTIC_CONDITION_LEN = 5
+if AB_D: SEMANTIC_CONDITION_LEN = 5
+else: SEMANTIC_CONDITION_LEN = 0
 RES_BLOCK_CONV_NUM = 3
-
-#Discriminator
-DISC_NUM = 3
-#disc conv
-DISC_IN_SIZE = 1
-DISC_OUT_SIZE = 1
-DISC_CAPACITY = 16 #32#64
-DISC_N_LAYERS = 5 #4
-DISC_STRIDE = 4
-DISC_KERNEL_SIZE = 15 
-DISC_NORM_MODE = 'weight_norm'
-
-
-if WANDB == 'TRAIN':
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project = EXP_NAME,
-        
-        #track hyperparameters and run metadata
-        config={
-        "SPECTRAL_LOSS_COEF": SPECTRAL_LOSS_COEF,
-        "WAVEFORM_LOSS_COEF": WAVEFORM_LOSS_COEF,
-        "SEMANTIC_LOSS_COEF": SEMANTIC_LOSS_COEF,
-        "KL_LOSS_COEF": KL_LOSS_COEF,
-        "PHASE_LOSS_COEF": PHASE_LOSS_COEF,
-        "NOISE_LOSS_COEF": NOISE_LOSS_COEF,
-        "LR": LR,
-        "SEED": SEED,
-        "WAVEFORM_LOSS_MULTIPLIER": WAVEFORM_LOSS_MULTIPLIER,
-        "WAVEFORM_LOSS_DECREASE_RATE": WAVEFORM_LOSS_DECREASE_RATE,
-        }
-    )
-
-if WANDB:
-    CKPT_PATH = PARENT_PATH / f'wss/ckpt/{EXP_NAME}_{wandb.run.name}.pth'
-else:
-    while True:
-        k = random.randint(0,2**12)
-        if k % 5 != 0: break
-    CKPT_PATH = PARENT_PATH / f'wss/ckpt/{EXP_NAME}_{k}.pth'
 
 GPU_NUM = 12
 DEVICE = torch.device(f'cuda:{GPU_NUM}' if torch.cuda.is_available() else 'cpu')

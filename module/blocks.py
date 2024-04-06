@@ -6,7 +6,6 @@ from torch.nn.utils import weight_norm as normalization
 import numpy as np
 import torch.nn.functional as F
 import torchaudio.transforms as T
-
 def concat(a,b):
     return torch.concatenate((a, b), dim=-1)
 
@@ -130,17 +129,10 @@ class Encoder(nn.Module):
                 ])
             self.net = nn.Sequential(*net)
             self.linear = nn.Sequential(nn.Linear(ENC_H[-1], LATENT_LEN*2), relu)
-       
-        self.register_buffer("warmed_up", torch.tensor(0))
- 
-    def set_warmed_up(self, state):
-        state = torch.tensor(int(state), device=self.warmed_up.device)
-        self.warmed_up = state
 
     def forward(self, x):
         if BLOCK_STYLE == 'CONV1D':
             #preprocessing: dc offset to 0, normalise energy.
-            mimi = x.clone()
             x_mag = torch.cat((torch.zeros(x.shape[0],1).to(DEVICE),dft(x)[:,1:]), dim=-1)
             preprocessed_x = idft(x_mag, cos=False)
             x_spec = x_mag.abs()
@@ -149,12 +141,10 @@ class Encoder(nn.Module):
             x_spec = x_spec / amp
 
             #encoder
-            preprocessed_x *= NORMALISED_ENERGY
+            preprocessed_x = preprocessed_x * NORMALISED_ENERGY
             conv1d_passed_preprocessed_x = self.net(preprocessed_x.unsqueeze(1))
             conv1d_passed_preprocessed_x = torch.squeeze(conv1d_passed_preprocessed_x, dim=2)
             w = self.linear(conv1d_passed_preprocessed_x)
-            if self.warmed_up:
-                w = w.detach()
             return w[:, :W_DIM], w[:, W_DIM:2*W_DIM], preprocessed_x, x_spec
 
 class Decoder(nn.Module):
@@ -168,9 +158,9 @@ class Decoder(nn.Module):
 
         if BLOCK_STYLE == 'CONV1D':
             self.linear = nn.Sequential(nn.Linear(LATENT_LEN+SEMANTIC_CONDITION_LEN, DEC_H[0]), relu)
-            if DECODER_STYLE == 'SPECTRAL_COMBINED':
+            if not AB_S:
                 self.output_dense = nn.Sequential(Conv1d(DEC_H[-1], 1, kernel_size=1, stride=1), tanh)
-            elif DECODER_STYLE == 'SPECTRAL_SEPARATED':
+            else:
                 self.amp_dense = nn.Sequential(Conv1d(DEC_H[-1], 1, kernel_size=2, stride=2), relu) #we may take negative values to spin clockwise but we followed the practical way of additive synthesizers which only uses 0 and positive values.
                 self.phase_dense = nn.Sequential(Conv1d(DEC_H[-1], 1, kernel_size=2, stride=2), tanh)
             net = []
@@ -184,14 +174,15 @@ class Decoder(nn.Module):
         if BLOCK_STYLE == 'CONV1D':
             x = self.linear(x).unsqueeze(2)
             x = self.net(x)
-            if DECODER_STYLE == 'SPECTRAL_COMBINED':
-                x = self.output_dense(x).squeeze(1)
-                amp, phase = x[:, :512], x[:, 512:]
-            elif DECODER_STYLE == 'SPECTRAL_SEPARATED':
+            if not AB_S:
+                out = self.output_dense(x).squeeze(1)
+                magnitude = dft(out)
+                magnitude[:,0] = 0
+                
+            else:
                 amp = self.amp_dense(x).squeeze(1)
                 phase = self.phase_dense(x).squeeze(1)
-            
-            magnitude = torch.concat((torch.zeros(x.shape[0],1).to(DEVICE), amp*torch.exp(1j * phase)), dim=-1)
+                magnitude = torch.concat((torch.zeros(x.shape[0],1).to(DEVICE), amp*torch.exp(1j * phase)), dim=-1)
             x_hat = idft(magnitude)
             amp_overall = torch.sum(x_hat.pow(2), dim=-1).sqrt().unsqueeze(-1)
             x_hat = x_hat/amp_overall

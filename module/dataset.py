@@ -4,7 +4,9 @@ import os
 import torch
 import torchaudio
 import re
+import numpy as np
 from torch.utils.data import Dataset, DataLoader, random_split
+from sklearn.model_selection import KFold
 from torch.fft import rfft
 
 '''
@@ -138,7 +140,20 @@ def data_build(datasets, folds, BS, loaderonly=True, num_workers=NUM_WORKERS) ->
       current_databuilder = DatasetBuilder(file_list=dataset)
       val_databuilders.append(current_databuilder)
       val_loaders.append(DataLoader(dataset=current_databuilder, batch_size=BS, drop_last=True, shuffle=False, num_workers=num_workers))
-      
+    
+    elif folds[ind] == -2:
+      kf = KFold(n_splits=5, shuffle=True, random_state=42)
+      # train_datasets = random_split(dataset, [0.2]*5)
+      for train_idx, test_idx in kf.split(dataset):
+        train_databuilder = DatasetBuilder(file_list=np.array(dataset)[train_idx])
+        train_databuilders.append(train_databuilder)
+        test_databuilder = DatasetBuilder(file_list=np.array(dataset)[test_idx])
+        test_databuilders.append(test_databuilder)
+        print(len(train_databuilder), len(test_databuilder))
+        train_loaders.append(DataLoader(dataset=train_databuilder, batch_size=BS, drop_last=True, shuffle=True, num_workers=num_workers))
+        #test_loaders.append(DataLoader(dataset=test_databuilder, batch_size=BS, drop_last=True, shuffle=False, num_workers=num_workers))
+
+
     else:
       assert (type(folds[ind]) is int) and (folds[ind] >= 2)
       train_size = int((folds[ind]/10) * len(dataset))

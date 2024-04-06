@@ -21,22 +21,12 @@ if __name__ == '__main__':
         query_name = WAVEFORM_NAMES[Q]
         query_num = '126'
         query = f'{query_name}_{query_num}' #Condition
-        #query_path = PARENT_PATH / f'wss/SerumDataset/{query}.wav'
         query_path = f'/workspace/wss/SerumDataset/{query}.wav'
         print(query_path)
         with torch.no_grad():
-            i_tensor = torch.tensor(1j, dtype=torch.complex64)
-            indices = [index for index, value in enumerate(db.file_list) if value == query_path]
-            i = indices[0]
-            datum = list(db[i])
-            for j in range(len(datum)):
-                if isinstance(datum[j], int):
-                    datum[j] = torch.Tensor([datum[j]]).to(torch.int64).to(DEVICE)
-                else: datum[j] = datum[j].reshape(1,-1).to(DEVICE)
-
-            x, y, amp, pos = tuple(datum)
-            mu_w, logvar_w = wavespace.encoder(x) #x, x_hat, mu_w, logvar_w, y
-            w = mu_w
+            x, y = db[db.file_list.index(filepath)]
+            x = x.unsqueeze(0).to(DEVICE)
+            w, _, _, _ = wavespace.encoder(x)
             features = get_semantic_conditions(x)
             fig, axes = plt.subplots(len(z1_range), len(z2_range), figsize=(80, 48))
             for n, z2 in enumerate(z2_range):
@@ -58,6 +48,7 @@ if __name__ == '__main__':
                     axes[m,n].set_xticks([])
                     axes[m,n].set_yticks([])
                     axes[m,n].grid(True)
+                    print(m,n)
             plt.tight_layout()
             folder_name = f'./fig/Z/{CKPT_NAME}/C{WAVEFORM_NAMES[C]}/Q{query}'
             if not os.path.exists(folder_name):
