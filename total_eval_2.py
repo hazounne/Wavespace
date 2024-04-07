@@ -22,17 +22,17 @@ if __name__ == '__main__':
     loaderonly=False
     )
     print(f'TEST INITIALISING::: S{TINY}_PL{LEARN_PRIORS}')
-    repeat = 100
+    repeat = 1
     for rep in range(repeat):
         print(rep)
         for SET in range(5):
             print(SET)
             if WAVEFORMS == waveedit:
                 print('WAVEEDIT')
-                CKPT_NAME = f'WSS_ISMIR_WE_S{TINY}_PL{LEARN_PRIORS}_SET{SET}'
+                CKPT_NAME = f'{EXP_NAME}_S{TINY}_PL{LEARN_PRIORS}_SET{SET}'
             elif WAVEFORMS == serum_sub2_B:
                 print('SERUM')
-                CKPT_NAME = f'WSS_ISMIR_SE_S{TINY}_PL{LEARN_PRIORS}_SET{SET}'
+                CKPT_NAME = f'{EXP_NAME}_S{TINY}_PL{LEARN_PRIORS}_SET{SET}'
             CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
             wavespace = Wavespace().load_from_checkpoint(CKPT_TEST).to(DEVICE)
             wavespace.eval()
@@ -47,10 +47,10 @@ if __name__ == '__main__':
 
                     D[SET,:] += wavespace.loss_values(*A).squeeze()
                     T += t
-    #print(D.div(num_of_data))
+    print(D.div(num_of_data))
     avgtime = T/(num_of_data * repeat)
     print(f'avgtime={avgtime}')
     print(f'RTF={(1024/48000)/avgtime}')
-    #print(f'Result:::{D.div(num_of_data).mean(dim=0)}')
+    print(f'Result:::{D.div(num_of_data).mean(dim=0)}')
     #torch.save(wavespace.state_dict(), f'/workspace/wss/ckpt/pt/{CKPT_NAME}.pt')
                 

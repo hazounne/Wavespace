@@ -4,6 +4,7 @@ from funcs import *
 from config import *
 import os
 import shutil
+import copy
 
 torch.manual_seed(0)
 torch.cuda.empty_cache()
@@ -47,11 +48,10 @@ if __name__ == '__main__':
                 }
             )
         
-        if CKPT_LOAD:
-            wavespace = Wavespace().load_from_checkpoint(CKPT_TEST).to(DEVICE)
-        else:
-            wavespace = Wavespace().to(DEVICE)
-
+       # if CKPT_LOAD:
+       #     wavespace = Wavespace().load_from_checkpoint(CKPT_TEST).to(DEVICE)
+       # else:
+        wavespace = copy.deepcopy(Wavespace()).to(DEVICE)
         print(f'###{AB_D} {AB_L} {AB_S}###SET{SET}')
     # Train.
         trainer = pl.Trainer(max_epochs=EPOCH,
