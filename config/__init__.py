@@ -11,32 +11,32 @@ PARENT_PATH = Path('/workspace') #/content
 WANDB_ID = '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b'
 torch.autograd.set_detect_anomaly(True)
 #check: numworkers, wandb.
-TRAINING = 'TRAIN'
+TRAINING = ''
 CKPT_LOAD = False
 if CKPT_LOAD: STARTING_EPOCH = 1500
 NUM_WORKERS = 24
 #Major Model Settings
 
+TINY, LEARN_PRIORS, AB_D, AB_L, AB_S = 0, 0, 1, 0, 0
+
 #SETTINGS
 if TRAINING == 'SWEEP':
     WANDB = 'SWEEP'
-    wandb.run.name = f'{TINY}{LEARN_PRIORS}{SET}'
+    wandb.run.name = f'{TINY}{LEARN_PRIORS}'
 elif TRAINING:
     WANDB = 'TRAIN'
     wandb.login(key=WANDB_ID)
 else:
     WANDB = 0
 
-AB_D, AB_L, AB_S = 1, 0, 0
 
-EPOCH = 20
+EPOCH = 5000
 TEST_NAME = '1'
-TINY = 0
-LEARN_PRIORS = 0
+
 if LEARN_PRIORS:
-    PRIOR_COEF = 17
-EXP_NAME ='WSS_TEST_AA' #f'WSS_ISMIR_AB_{AB_D}{AB_L}{AB_S}'
-CKPT_NAME = 'WSS_ISMIR_SE_S0_PL0_SET0'
+    PRIOR_COEF = 1
+EXP_NAME ='WSS_ISMIR2024_SE'
+CKPT_NAME = 'WSS_ISMIR2024_AB_00110SET0'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'

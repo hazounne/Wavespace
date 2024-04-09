@@ -25,16 +25,16 @@ if __name__ == '__main__':
     repeat = 1
     for rep in range(repeat):
         print(rep)
-        for SET in range(5):
+        for SET in range(1):
             print(SET)
             if WAVEFORMS == waveedit:
                 print('WAVEEDIT')
-                CKPT_NAME = f'{EXP_NAME}_S{TINY}_PL{LEARN_PRIORS}_SET{SET}'
+                CKPT_NAME = f'{EXP_NAME}_{TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}SET{SET}'
             elif WAVEFORMS == serum_sub2_B:
                 print('SERUM')
-                CKPT_NAME = f'{EXP_NAME}_S{TINY}_PL{LEARN_PRIORS}_SET{SET}'
+                CKPT_NAME = f'{EXP_NAME}_{TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}SET{SET}'
             CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
-            wavespace = Wavespace().load_from_checkpoint(CKPT_TEST).to(DEVICE)
+            wavespace = Wavespace.load_from_checkpoint(CKPT_TEST).to(DEVICE)
             wavespace.eval()
             db = test_databuilders[SET]
             num_of_data = len(db)

@@ -32,7 +32,7 @@ if __name__ == '__main__':
             wandb.init(
                 # set the wandb project where this run will be logged
                 project = EXP_NAME,
-                name = f'S{TINY}_PL{LEARN_PRIORS}_SET{SET}',
+                name = f'{TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}SET{SET}',
                 #track hyperparameters and run metadata
                 config={
                 "SPECTRAL_LOSS_COEF": SPECTRAL_LOSS_COEF,
@@ -52,10 +52,10 @@ if __name__ == '__main__':
        #     wavespace = Wavespace().load_from_checkpoint(CKPT_TEST).to(DEVICE)
        # else:
         wavespace = copy.deepcopy(Wavespace()).to(DEVICE)
-        print(f'###{AB_D} {AB_L} {AB_S}###SET{SET}')
+        print(f'###{TINY} {LEARN_PRIORS} {AB_D} {AB_L} {AB_S}###SET{SET}')
     # Train.
         trainer = pl.Trainer(max_epochs=EPOCH,
-                            resume_from_checkpoint=CKPT_TEST if CKPT_LOAD else None,
+                            #resume_from_checkpoint=CKPT_TEST if CKPT_LOAD else None,
                             accelerator='gpu',
                             devices=[GPU_NUM],
                             enable_progress_bar=True,
@@ -65,7 +65,7 @@ if __name__ == '__main__':
                     train_dataloaders=train_loaders[SET],
                     )
         if WANDB:
-            wandb.run.name = f'S{TINY}_PL{LEARN_PRIORS}_SET{SET}'
+            wandb.run.name = f'{TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}SET{SET}'
             CKPT_PATH = PARENT_PATH / f'wss/ckpt/{EXP_NAME}_{wandb.run.name}.pth'
         else:
             while True:
