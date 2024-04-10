@@ -1,3 +1,5 @@
 wandb/
 log/
 SerumDataset/
+config/wandb/
+ckpt/
