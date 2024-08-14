@@ -21,11 +21,11 @@ if __name__ == '__main__':
     BS=BS,
     loaderonly=False
     )
-    print(f'TEST INITIALISING::: S{TINY}_PL{LEARN_PRIORS}')
+    print(f'TEST INITIALISING::: {TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}')
     repeat = 1
     for rep in range(repeat):
         print(rep)
-        for SET in range(1):
+        for SET in range(5):
             print(SET)
             if WAVEFORMS == waveedit:
                 print('WAVEEDIT')
@@ -34,7 +34,7 @@ if __name__ == '__main__':
                 print('SERUM')
                 CKPT_NAME = f'{EXP_NAME}_{TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}SET{SET}'
             CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
-            wavespace = Wavespace.load_from_checkpoint(CKPT_TEST).to(DEVICE)
+            wavespace = Wavespace().load_from_checkpoint(CKPT_TEST).to(DEVICE)
             wavespace.eval()
             db = test_databuilders[SET]
             num_of_data = len(db)

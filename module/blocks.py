@@ -129,7 +129,6 @@ class Encoder(nn.Module):
                 ])
             self.net = nn.Sequential(*net)
             self.linear = nn.Sequential(nn.Linear(ENC_H[-1], LATENT_LEN*2), relu)
-
     def forward(self, x):
         if BLOCK_STYLE == 'CONV1D':
             #preprocessing: dc offset to 0, normalise energy.

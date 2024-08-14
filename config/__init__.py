@@ -18,7 +18,6 @@ NUM_WORKERS = 24
 #Major Model Settings
 
 TINY, LEARN_PRIORS, AB_D, AB_L, AB_S = 0, 0, 1, 0, 0
-
 #SETTINGS
 if TRAINING == 'SWEEP':
     WANDB = 'SWEEP'
@@ -29,14 +28,13 @@ elif TRAINING:
 else:
     WANDB = 0
 
-
 EPOCH = 5000
 TEST_NAME = '1'
 
 if LEARN_PRIORS:
     PRIOR_COEF = 1
 EXP_NAME ='WSS_ISMIR2024_SE'
-CKPT_NAME = 'WSS_ISMIR2024_AB_00110SET0'
+CKPT_NAME = f'WSS_ISMIR2024_SE_{TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}SET0'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
@@ -94,8 +92,7 @@ waveedit = [
 ]
 
 ###########
-if DATASET_TYPE == 'WAVETABLE': WAVEFORMS = serum_sub2_B #internal_
-elif DATASET_TYPE == 'PLAY': WAVEFORMS = nsynth_all_B #Conditions we use
+if DATASET_TYPE == 'WAVETABLE': WAVEFORMS = serum_sub2_B
 N_CONDS = len(WAVEFORMS)
 
 WAVEFORM_NAMES = [i[0] for i in WAVEFORMS]
