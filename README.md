@@ -1,2 +1,2 @@
-# wavespace
+# Wavespace
 The official Wavespace implementation.
