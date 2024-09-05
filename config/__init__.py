@@ -33,8 +33,8 @@ TEST_NAME = '1'
 
 if LEARN_PRIORS:
     PRIOR_COEF = 1
-EXP_NAME ='WSS_ISMIR2024_SE'
-CKPT_NAME = f'WSS_ISMIR2024_SE_{TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}SET0'
+EXP_NAME ='WSS_ICASSP2025_SE'
+CKPT_NAME = f'WSS_ICASSP2025_SE_{TINY}{LEARN_PRIORS}{AB_D}{AB_L}{AB_S}SET0'
 CKPT_TEST = PARENT_PATH / f'wss/ckpt/{CKPT_NAME}.pth'
 DATASET_TYPE = 'WAVETABLE'
 BLOCK_STYLE = 'CONV1D'
@@ -87,8 +87,8 @@ serum_sub2_B = [
 # ]
 
 waveedit = [
-    ('softwaves', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('rect', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('sine', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+    ('pulse', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
 ###########
@@ -128,7 +128,7 @@ if WANDB == 'SWEEP':
 else:
     with open(PARENT_PATH / f'wss/config/config.yaml', 'r') as stream:
         config = yaml.safe_load(stream)
-        
+
 ##DATA
 SR = 16000
 RAW_LEN = 2**10
