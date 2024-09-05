@@ -1,7 +1,6 @@
 wandb/
 log/
 config/wandb/
-ckpt/
 misc/
 internal_wavetable/
 fig/
