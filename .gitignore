@@ -1,5 +1,12 @@
 wandb/
 log/
-SerumDataset/
 config/wandb/
 ckpt/
+misc/
+internal_wavetable/
+fig/
+fig_2/
+sweeps/
+generated_samples/
+config/wandb/
+instrument_set/
