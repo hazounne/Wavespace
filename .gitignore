@@ -9,3 +9,5 @@ sweeps/
 generated_samples/
 config/wandb/
 instrument_set/
+ckpt/pt
+ckpt/traced_pt
