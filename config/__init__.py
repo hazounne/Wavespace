@@ -6,18 +6,18 @@ import random
 import os
 from pathlib import Path
 
-_USER_CURRENT = 'HZL' #set as you before any operation
-PARENT_PATH = Path('/workspace') #/content
-WANDB_ID = '22aca2ffa6c7ca44c7a0a98bfe68eddbcb0ff72b'
+_USER_CURRENT = 'HZL' #set before any operation
+PARENT_PATH = Path('/workspace')
+WANDB_ID = '' #set when log values
 torch.autograd.set_detect_anomaly(True)
 #check: numworkers, wandb.
 TRAINING = ''
 CKPT_LOAD = False
 if CKPT_LOAD: STARTING_EPOCH = 1500
 NUM_WORKERS = 24
-#Major Model Settings
 
-TINY, LEARN_PRIORS, AB_D, AB_L, AB_S = 0, 0, 1, 0, 0
+#Major Model Settings
+TINY, LEARN_PRIORS, AB_D, AB_L, AB_S = 0, 0, 1, 0, 0 # last three are ablation booleans
 #SETTINGS
 if TRAINING == 'SWEEP':
     WANDB = 'SWEEP'
@@ -43,19 +43,19 @@ LOSS_SCHEDULE = True #0.001 -> 0.0001
 SUB_DIM = 2
 #################################################################
 
-basic_shapes = [
-    ('sin', (0, 0)),
-    ('tri', (0, 3)),
-    ('pul', (3, 0)),
-    ('saw', (3, 3)),
-]
+# basic_shapes = [
+#     ('sin', (0, 0)),
+#     ('tri', (0, 3)),
+#     ('pul', (3, 0)),
+#     ('saw', (3, 3)),
+# ]
 
-serum_sub_A = [
-    ('4088', (0, 0)),
-    ('BottleBlow', (0, 3)),
-    ('Acid', (3, 0)),
-    ('Debussy', (3, 3)),
-]
+# serum_sub_A = [
+#     ('4088', (0, 0)),
+#     ('BottleBlow', (0, 3)),
+#     ('Acid', (3, 0)),
+#     ('Debussy', (3, 3)),
+# ]
 
 serum_sub_B = []
 serum_sub2_B = [
@@ -79,12 +79,12 @@ serum_sub2_B = [
     ('CrushWub', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
 ]
 
-internal_ = [
-    ('PNO', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('STR', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('WND', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-    ('GTR', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
-]
+# internal_ = [
+#     ('PNO', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+#     ('STR', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+#     ('WND', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+#     ('GTR', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
+# ]
 
 waveedit = [
     ('softwaves', [0.]*SUB_DIM, [0.]*SUB_DIM, [5.]*SUB_DIM, [0.]*SUB_DIM,),
@@ -127,7 +127,8 @@ if WANDB == 'SWEEP':
     config = wandb.config
 else:
     with open(PARENT_PATH / f'wss/config/config.yaml', 'r') as stream:
-        config = yaml.safe_load(stream) 
+        config = yaml.safe_load(stream)
+        
 ##DATA
 SR = 16000
 RAW_LEN = 2**10
